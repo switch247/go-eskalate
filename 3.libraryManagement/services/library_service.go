@@ -49,8 +49,20 @@ func (l *libraryService) BorrowBook(bookID int, memberID int) error {
 		return errors.New("Member not found")
 	}
 
-	member.BorrowedBooks = append(member.BorrowedBooks, *(book))
-	book.Status = "Borrowed"
+	newlist := append(member.BorrowedBooks, *(book))
+	// test
+	l.members[memberID] = &models.Member{
+		ID:            member.ID,
+		Name:          member.Name,
+		BorrowedBooks: newlist,
+	}
+
+	l.books[bookID] = &models.Book{
+		ID:     book.ID,
+		Title:  book.Title,
+		Author: book.Author,
+		Status: "Borrowed",
+	}
 	return nil
 }
 
@@ -102,8 +114,19 @@ func (l *libraryService) ReturnBook(bookID int, memberID int) error {
 
 	for i, borrowedBook := range member.BorrowedBooks {
 		if borrowedBook.ID == bookID {
-			member.BorrowedBooks = append(member.BorrowedBooks[:i], member.BorrowedBooks[i+1:]...)
-			book.Status = "Available"
+			deleted_list := append(member.BorrowedBooks[:i], member.BorrowedBooks[i+1:]...)
+			Status := "Available"
+			l.books[bookID] = &models.Book{
+				ID:     book.ID,
+				Title:  book.Title,
+				Author: borrowedBook.Author,
+				Status: Status,
+			}
+			l.members[memberID] = &models.Member{
+				ID:            member.ID,
+				Name:          member.Name,
+				BorrowedBooks: deleted_list,
+			}
 			return nil
 		}
 	}
