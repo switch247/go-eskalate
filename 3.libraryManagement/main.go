@@ -2,13 +2,16 @@ package main
 
 import (
 	"fmt"
+	"main/controllers"
 	"main/services"
 )
 
 var libraryService services.LibraryService
 
 func main() {
-	libraryService = services.NewLibraryService()
 	fmt.Println("Hello, World!")
-	fmt.Printf("%+v\n", libraryService.ListAvailableBooks())
+	libraryService = services.NewLibraryService()
+
+	controllers.InitLibraryController(libraryService)
+	controllers.LibraryController.ConsoleInteraction()
 }

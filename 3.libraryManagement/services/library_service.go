@@ -1,84 +1,133 @@
 package services
 
 import (
+	"errors"
 	"main/models"
 )
 
 type LibraryService interface {
-	AddBook(book *models.Book)
-	RemoveBook(bookID int)
+	AddBook(book *models.Book) error
+	RemoveBook(bookID int) error
 	BorrowBook(bookID int, memberID int) error
 	ReturnBook(bookID int, memberID int) error
 	ListAvailableBooks() []models.Book
-	ListBorrowedBooks(memberID int) []models.Book
+	ListBorrowedBooks(memberID int) ([]models.Book, error)
 }
 
 type libraryService struct {
-	books   []models.Book
-	members []models.Member
+	books   map[int]*models.Book
+	members map[int]*models.Member
 }
 
 // AddBook implements LibraryService.
-func (l *libraryService) AddBook(book *models.Book) {
-	panic("unimplemented")
+func (l *libraryService) AddBook(book *models.Book) error {
+	val := *book
+	_, ok := l.books[val.ID]
+	if ok {
+		return errors.New("Book already exists")
+	} else {
+		l.books[val.ID] = book
+		return nil
+	}
+
 }
 
 // BorrowBook implements LibraryService.
 func (l *libraryService) BorrowBook(bookID int, memberID int) error {
-	panic("unimplemented")
+
+	book, ok := l.books[bookID]
+	if !ok {
+		return errors.New("Book not found")
+	}
+
+	if book.Status != "Available" {
+		return errors.New("Book already borrowed")
+	}
+
+	member, ok := l.members[memberID]
+	if !ok {
+		return errors.New("Member not found")
+	}
+
+	member.BorrowedBooks = append(member.BorrowedBooks, *(book))
+	book.Status = "Borrowed"
+	return nil
 }
 
 // ListAvailableBooks implements LibraryService.
 func (l *libraryService) ListAvailableBooks() []models.Book {
-	// panic("unimplemented")
-
 	var availableBooks []models.Book
 	for _, book := range l.books {
 		if book.Status == "Available" {
-			availableBooks = append(availableBooks, book)
+			availableBooks = append(availableBooks, *book)
 		}
 	}
 	return availableBooks
 }
 
 // ListBorrowedBooks implements LibraryService.
-func (l *libraryService) ListBorrowedBooks(memberID int) []models.Book {
-	panic("unimplemented")
+func (l *libraryService) ListBorrowedBooks(memberID int) ([]models.Book, error) {
+	member, ok := l.members[memberID]
+	if !ok {
+		return nil, errors.New("Member not found")
+	}
+	return member.BorrowedBooks, nil
 }
 
 // RemoveBook implements LibraryService.
-func (l *libraryService) RemoveBook(bookID int) {
-	panic("unimplemented")
+func (l *libraryService) RemoveBook(bookID int) error {
+	_, ok := l.books[bookID]
+	if !ok {
+		return errors.New("Book not found")
+	}
+	delete(l.books, bookID)
+	return nil
 }
 
 // ReturnBook implements LibraryService.
 func (l *libraryService) ReturnBook(bookID int, memberID int) error {
-	panic("unimplemented")
+	book, ok := l.books[bookID]
+	if !ok {
+		return errors.New("Book not found")
+	}
+
+	if book.Status != "Borrowed" {
+		return errors.New("Book not borrowed")
+	}
+
+	member, ok := l.members[memberID]
+	if !ok {
+		return errors.New("Member not found")
+	}
+
+	for i, borrowedBook := range member.BorrowedBooks {
+		if borrowedBook.ID == bookID {
+			member.BorrowedBooks = append(member.BorrowedBooks[:i], member.BorrowedBooks[i+1:]...)
+			book.Status = "Available"
+			return nil
+		}
+	}
+
+	return errors.New("Book not found in member's borrowed books")
 }
 
 func NewLibraryService() LibraryService {
-	//  dummy data
-	var _books = []models.Book{
-		{ID: 1, Title: "Book 1", Author: "Author 1", Status: "Available"},
-		{ID: 2, Title: "Book 2", Author: "Author 2", Status: "Available"},
-		{ID: 3, Title: "Book 3", Author: "Author 3", Status: "Borrowed"},
-		{ID: 4, Title: "Book 4", Author: "Author 4", Status: "Borrowed"},
-		{ID: 5, Title: "Book 5", Author: "Author 5", Status: "Available"},
+	// Dummy data
+	_books := map[int]*models.Book{
+		1: {ID: 1, Title: "Book 1", Author: "Author 1", Status: "Available"},
+		2: {ID: 2, Title: "Book 2", Author: "Author 2", Status: "Available"},
+		3: {ID: 3, Title: "Book 3", Author: "Author 3", Status: "Borrowed"},
+		4: {ID: 4, Title: "Book 4", Author: "Author 4", Status: "Borrowed"},
+		5: {ID: 5, Title: "Book 5", Author: "Author 5", Status: "Available"},
 	}
 
-	var _members = []models.Member{
-		{ID: 1, Name: "Member 1", BorrowedBooks: []models.Book{
-			_books[2], // Boook3 is borrowed by member 1
-		}},
-		{ID: 2, Name: "Member 2", BorrowedBooks: []models.Book{
-			_books[3],
-		}},
-		{ID: 3, Name: "Member 3"},
+	_members := map[int]*models.Member{
+		1: {ID: 1, Name: "Member 1", BorrowedBooks: []models.Book{*(_books[3])}},
+		2: {ID: 2, Name: "Member 2", BorrowedBooks: []models.Book{*(_books[4])}},
+		3: {ID: 3, Name: "Member 3"},
 	}
 
 	return &libraryService{
-		// books:   make([]models.Book, 0),
-		// members: make([]models.Member, 0),
 		books:   _books,
 		members: _members,
 	}
