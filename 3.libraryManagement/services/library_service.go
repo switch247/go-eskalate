@@ -7,11 +7,14 @@ import (
 
 type LibraryService interface {
 	AddBook(book *models.Book) error
+	AddMember(member *models.Member) error
 	RemoveBook(bookID int) error
 	BorrowBook(bookID int, memberID int) error
 	ReturnBook(bookID int, memberID int) error
 	ListAvailableBooks() []models.Book
 	ListBorrowedBooks(memberID int) ([]models.Book, error)
+	ListAllMembers() []models.Member
+	ListAllBooks() []models.Book
 }
 
 type libraryService struct {
@@ -19,7 +22,7 @@ type libraryService struct {
 	members map[int]*models.Member
 }
 
-// AddBook implements LibraryService.
+// AddBook
 func (l *libraryService) AddBook(book *models.Book) error {
 	val := *book
 	_, ok := l.books[val.ID]
@@ -29,10 +32,19 @@ func (l *libraryService) AddBook(book *models.Book) error {
 		l.books[val.ID] = book
 		return nil
 	}
-
 }
 
-// BorrowBook implements LibraryService.
+func (l *libraryService) AddMember(member *models.Member) error {
+	val := *member
+	_, ok := l.members[val.ID]
+	if ok {
+		return errors.New("Member already exists")
+	} else {
+		l.members[val.ID] = member
+		return nil
+	}
+}
+
 func (l *libraryService) BorrowBook(bookID int, memberID int) error {
 
 	book, ok := l.books[bookID]
@@ -66,7 +78,6 @@ func (l *libraryService) BorrowBook(bookID int, memberID int) error {
 	return nil
 }
 
-// ListAvailableBooks implements LibraryService.
 func (l *libraryService) ListAvailableBooks() []models.Book {
 	var availableBooks []models.Book
 	for _, book := range l.books {
@@ -77,7 +88,6 @@ func (l *libraryService) ListAvailableBooks() []models.Book {
 	return availableBooks
 }
 
-// ListBorrowedBooks implements LibraryService.
 func (l *libraryService) ListBorrowedBooks(memberID int) ([]models.Book, error) {
 	member, ok := l.members[memberID]
 	if !ok {
@@ -86,7 +96,6 @@ func (l *libraryService) ListBorrowedBooks(memberID int) ([]models.Book, error) 
 	return member.BorrowedBooks, nil
 }
 
-// RemoveBook implements LibraryService.
 func (l *libraryService) RemoveBook(bookID int) error {
 	_, ok := l.books[bookID]
 	if !ok {
@@ -96,7 +105,6 @@ func (l *libraryService) RemoveBook(bookID int) error {
 	return nil
 }
 
-// ReturnBook implements LibraryService.
 func (l *libraryService) ReturnBook(bookID int, memberID int) error {
 	book, ok := l.books[bookID]
 	if !ok {
@@ -132,6 +140,22 @@ func (l *libraryService) ReturnBook(bookID int, memberID int) error {
 	}
 
 	return errors.New("Book not found in member's borrowed books")
+}
+
+func (l *libraryService) ListAllBooks() []models.Book {
+	var allBooks []models.Book
+	for _, book := range l.books {
+		allBooks = append(allBooks, *book)
+	}
+	return allBooks
+}
+
+func (l *libraryService) ListAllMembers() []models.Member {
+	var allMembers []models.Member
+	for _, member := range l.members {
+		allMembers = append(allMembers, *member)
+	}
+	return allMembers
 }
 
 func NewLibraryService() LibraryService {

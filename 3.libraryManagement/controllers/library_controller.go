@@ -41,6 +41,20 @@ func (lc *LibraryControllerType) AddBook() {
 	}
 }
 
+func (lc *LibraryControllerType) AddMember() {
+	memberName := getStringInput("Enter member name: ")
+	member := &models.Member{
+		ID:   len(lc.LibraryService.ListAllMembers()) + 1,
+		Name: memberName,
+	}
+	err := lc.LibraryService.AddMember(member)
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else {
+		fmt.Println("Member added successfully", *member)
+	}
+}
+
 func (lc *LibraryControllerType) RemoveBook() {
 	bookID := getIntInput("Enter book ID: ")
 	err := lc.LibraryService.RemoveBook(bookID)
@@ -93,6 +107,20 @@ func (lc *LibraryControllerType) ListBorrowedBooks() {
 	}
 }
 
+func (lc *LibraryControllerType) ListAllMembers() {
+	members := lc.LibraryService.ListAllMembers()
+	for _, member := range members {
+		fmt.Println(member)
+	}
+}
+
+func (lc *LibraryControllerType) ListAllBooks() {
+	books := lc.LibraryService.ListAllBooks()
+	for _, book := range books {
+		fmt.Println(book)
+	}
+}
+
 func (lc *LibraryControllerType) ConsoleInteraction() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -105,7 +133,10 @@ func (lc *LibraryControllerType) ConsoleInteraction() {
 		fmt.Println("4. Return a book")
 		fmt.Println("5. List available books")
 		fmt.Println("6. List borrowed books")
-		fmt.Println("7. Exit")
+		fmt.Println("7. add a member")
+		fmt.Println("8. List all member")
+		fmt.Println("9. add list all books")
+		fmt.Println("0. Exit")
 		choice, _ := reader.ReadString('\n')
 		choice = string(choice[0])
 		switch choice {
@@ -123,7 +154,14 @@ func (lc *LibraryControllerType) ConsoleInteraction() {
 		case "6":
 			lc.ListBorrowedBooks()
 		case "7":
+			lc.AddMember()
+		case "8":
+			lc.ListAllMembers()
+		case "9":
+			lc.ListAllBooks()
+		case "0":
 			fmt.Println("Exiting...")
+			reader.ReadString('\n')
 			return
 		default:
 			fmt.Println("Invalid choice")
