@@ -1,6 +1,9 @@
-package main
+package tests
 
 import (
+	"main/task1"
+	"main/task2"
+	"main/utils/cleaner"
 	"reflect"
 	"testing"
 )
@@ -17,7 +20,7 @@ func TestClean(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if result := clean(test.input); result != test.output {
+		if result := cleaner.Clean(test.input); result != test.output {
 			t.Errorf("Expected %q, but got %q", test.output, result)
 		} else {
 			t.Logf("Test passed for input: %q", test.input)
@@ -36,7 +39,7 @@ func TestWordFrequencyCount(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if frequency := WordFrequencyCount(test.input); !reflect.DeepEqual(frequency, test.output) {
+		if frequency := task1.WordFrequencyCount(test.input); !reflect.DeepEqual(frequency, test.output) {
 			t.Errorf("Expected %v, but got %v", test.output, frequency)
 		}
 	}
@@ -55,7 +58,7 @@ func TestIsPalindrome(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if result := IsPalindrome(test.input); result != test.output {
+		if result := task2.IsPalindrome(test.input); result != test.output {
 			t.Errorf("Expected %t, but got %t", test.output, result)
 		}
 	}
