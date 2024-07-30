@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type LibraryControllerType struct {
@@ -23,19 +24,53 @@ func InitLibraryController(libraryService services.LibraryService) {
 }
 
 func (lc *LibraryControllerType) AddBook() {
-	lc.LibraryService.AddBook(&models.Book{})
+	bookID := getIntInput("Enter book ID: ")
+	bookTitle := getStringInput("Enter book title: ")
+	bookAuthor := getStringInput("Enter book author: ")
+	book := &models.Book{
+		ID:     bookID,
+		Title:  bookTitle,
+		Author: bookAuthor,
+		Status: "Available",
+	}
+	err := lc.LibraryService.AddBook(book)
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else {
+		fmt.Println("Book added successfully", *book)
+	}
 }
 
-func (lc *LibraryControllerType) RemoveBook(bookID int) {
-	lc.LibraryService.RemoveBook(bookID)
+func (lc *LibraryControllerType) RemoveBook() {
+	bookID := getIntInput("Enter book ID: ")
+	err := lc.LibraryService.RemoveBook(bookID)
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else {
+		fmt.Println("Book removed successfully")
+	}
 }
 
-func (lc *LibraryControllerType) BorrowBook(bookID int, memberID int) {
-	lc.LibraryService.BorrowBook(bookID, memberID)
+func (lc *LibraryControllerType) BorrowBook() {
+	memberID := getIntInput("Enter member ID: ")
+	bookID := getIntInput("Enter book ID: ")
+	err := lc.LibraryService.BorrowBook(bookID, memberID)
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else {
+		fmt.Println("Book borrowed successfully")
+	}
 }
 
-func (lc *LibraryControllerType) ReturnBook(bookID int, memberID int) {
-	lc.LibraryService.ReturnBook(bookID, memberID)
+func (lc *LibraryControllerType) ReturnBook() {
+	memberID := getIntInput("Enter member ID: ")
+	bookID := getIntInput("Enter book ID: ")
+	err := lc.LibraryService.ReturnBook(bookID, memberID)
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else {
+		fmt.Println("Book returned successfully")
+	}
 }
 
 func (lc *LibraryControllerType) ListAvailableBooks() {
@@ -46,14 +81,8 @@ func (lc *LibraryControllerType) ListAvailableBooks() {
 }
 
 func (lc *LibraryControllerType) ListBorrowedBooks() {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter member ID: ")
-	memberIDString, _ := reader.ReadString('\n')
-	memberID, err := strconv.Atoi(strings.TrimSpace(memberIDString))
-	if err != nil {
-		fmt.Println("Invalid member ID")
-		return
-	}
+
+	memberID := getIntInput("Enter member ID: ")
 	books, err := lc.LibraryService.ListBorrowedBooks(memberID)
 	if err == nil {
 		for _, book := range books {
@@ -62,34 +91,32 @@ func (lc *LibraryControllerType) ListBorrowedBooks() {
 	} else {
 		fmt.Println("Error:", err)
 	}
-	return
 }
 
 func (lc *LibraryControllerType) ConsoleInteraction() {
 	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Println("Welcome to the Library Management System!")
-	fmt.Println("Please select an option:")
-	fmt.Println("1. Add a book")
-	fmt.Println("2. Remove a book")
-	fmt.Println("3. Borrow a book")
-	fmt.Println("4. Return a book")
-	fmt.Println("5. List available books")
-	fmt.Println("6. List borrowed books")
-	fmt.Println("7. Exit")
-
 	for {
+		fmt.Println("================================================================================")
+		fmt.Println("Welcome to the Library Management System!")
+		fmt.Println("Please select an option:")
+		fmt.Println("1. Add a book")
+		fmt.Println("2. Remove a book")
+		fmt.Println("3. Borrow a book")
+		fmt.Println("4. Return a book")
+		fmt.Println("5. List available books")
+		fmt.Println("6. List borrowed books")
+		fmt.Println("7. Exit")
 		choice, _ := reader.ReadString('\n')
 		choice = string(choice[0])
 		switch choice {
 		case "1":
 			lc.AddBook()
 		case "2":
-			lc.RemoveBook(1)
+			lc.RemoveBook()
 		case "3":
-			lc.BorrowBook(1, 1)
+			lc.BorrowBook()
 		case "4":
-			lc.ReturnBook(1, 1)
+			lc.ReturnBook()
 		case "5":
 			lc.ListAvailableBooks()
 			break
@@ -100,15 +127,28 @@ func (lc *LibraryControllerType) ConsoleInteraction() {
 			return
 		default:
 			fmt.Println("Invalid choice")
-			// lc.ConsoleInteraction()
 		}
+		fmt.Println("================================================================================")
+		time.Sleep(2000)
 	}
 }
 
-func getIntInput() int {
+func getStringInput(prompt string) string {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Print("Enter input: ")
+		fmt.Print(prompt)
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		if input != "" {
+			return input
+		}
+		fmt.Println("Invalid input. Please enter a non-empty string.")
+	}
+}
+func getIntInput(prompt string) int {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print(prompt)
 		input, _ := reader.ReadString('\n')
 		input = strings.TrimSpace(input)
 		num, err := strconv.Atoi(input)
