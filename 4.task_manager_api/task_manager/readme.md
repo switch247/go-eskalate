@@ -102,9 +102,6 @@ type Task struct {
 }
 ```
 
-## API Documentation
-The API documentation, including detailed information about each endpoint, request and response formats, and error handling, is available in the `docs/api_documentation.md` file.
-
 ## Validation
 The Task struct uses the github.com/go-playground/validator package to validate the input data. The validate tags on the struct fields ensure that the required fields are provided and in the correct format.
 
@@ -131,6 +128,10 @@ if err != nil {
 // The task is valid, you can proceed with creating it
 
 ```
+
+## API Documentation
+The API documentation, including detailed information about each endpoint, request and response formats, and error handling, is available in the `docs/api_documentation.md` file.
+
 ## Testing
 You can use Postman or any other API testing tool to interact with the Task Management REST API. The Postman collection for this API is available in the `docs/` directory.
 
