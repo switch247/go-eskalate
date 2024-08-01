@@ -1,62 +1,115 @@
-Develop a Task Management REST API using Go and Gin Framework
-Objective:
-The objective of this task is to create a simple Task Management REST API using Go programming language and Gin Framework. This API will support basic CRUD operations for managing tasks.
+Sure, here's the updated README file with the changes you requested:
 
-Requirements
-Implement a REST API with the following endpoints:
-GET /tasks: Get a list of all tasks.
-GET /tasks/:id: Get the details of a specific task.
-PUT /tasks/:id: Update a specific task. This endpoint should accept a JSON body with the new details of the task.
-DELETE /tasks/:id: Delete a specific task.
-POST /tasks: Create a new task. This endpoint should accept a JSON body with the task's title, description, due date, and status.
-Use an in-memory database to store tasks. Database integration with persistent storage will be covered in later lessons, so for this task, focus on implementing data storage in memory.
-Ensure proper error handling and response codes for different scenarios such as successful operations, invalid requests, and resources not found.
-Provide clear and concise documentation for each endpoint using postman, including expected request payloads and response formats.
-Utilize Postman to test each endpoint of the Task Management API.
+# Task Management REST API
 
-Instructions
-Use Go programming language and Gin Framework to develop the API.
-Implement the specified endpoints adhering to the defined requirements.
-Utilize an in-memory database to store task data.
-Test the API endpoints using appropriate tools (e.g., Postman, curl).
-Write clean, well-structured, and maintainable code with proper comments.
-Ensure the code is properly formatted and follows best practices for Go development.
-Document the API endpoints with details on request and response formats.
-Submit your code along with any necessary instructions for running and testing the API.
+## Introduction
+This is a simple Task Management REST API built using the Go programming language and the Gin web framework. The API supports basic CRUD (Create, Read, Update, Delete) operations for managing tasks.
 
-Folder Structure:
-Follow the following folder structure for this task
+## Prerequisites
+- Go (version 1.16 or higher)
+- Gin web framework (`go get -u github.com/gin-gonic/gin`)
 
-task_manager/
-├── main.go
-├── controllers/
-│   └── task_controller.go
-├── models/
-│   └── task.go
-├── data/
-│   └── task_service.go
-├── router/
-│   └── router.go
-├── docs/
-│   └── api_documentation.md
-└── go.mod
+## Getting Started
 
-main.go: Entry point of the application.
-controllers/task_controller.go: Handles incoming HTTP requests and invokes the appropriate service methods.
-models/: Defines the data structures used in the application.
-data/task_service.go: Contains business logic and data manipulation functions.
-router/router.go: Sets up the routes and initializes the Gin router and Defines the routing configuration for the API.
-docs/api_documentation.md: Contains API documentation and other related documentation.
-Evaluation Criteria:
+1. Clone the repository:
+```
+git clone https://github.com/your-username/task-manager.git
+```
 
-Implementation of all required endpoints according to specifications.
-Correct handling of various HTTP methods and response codes.
-Proper error handling and validation of input data.
-Efficient and well-structured code following Go best practices.
-Clear and comprehensive documentation of API endpoints.
-Compliance with the provided instructions and requirements.
+2. Navigate to the project directory:
+```
+cd task-manager
+```
 
-Note
-Remember that this task is focused on backend development skills using Go and Gin Framework. Avoid unnecessary complexity in the implementation.
-Database integration with persistent storage will be addressed in subsequent lessons; hence, focus on implementing data storage in memory for this task.
+3. Build the application:
+```
+go build -o task-manager ./main.go
+```
 
+4. Run the application:
+```
+./task-manager
+```
+
+The API will start running on `http://localhost:8080`.
+
+## API Endpoints
+
+The API provides the following endpoints:
+
+### Get all tasks
+```
+GET /tasks
+```
+
+### Get a specific task
+```
+GET /tasks/{id}
+```
+
+### Create a new task
+```
+POST /tasks
+```
+**Request body:**
+```json
+{
+  "id": "1",
+  "title": "Task 1",
+  "description": "This is a sample task",
+  "due_date": "2023-06-30",
+  "status": "Pending"
+}
+```
+
+### Update a task
+```
+PUT /tasks/{id}
+```
+**Request body:**
+```json
+{
+  "title": "Updated Task 1",
+  "description": "This is an updated task",
+  "due_date": "2023-07-15",
+  "status": "In Progress"
+}
+```
+
+### Delete a task
+```
+DELETE /tasks/{id}
+```
+
+## Data Model
+The `Task` struct, defined in the `models` package, has the following fields:
+
+```go
+type TaskStatus string
+
+const (
+	StatusPending   TaskStatus = "Pending"
+	StatusCompleted TaskStatus = "Completed"
+	StatusInProgress TaskStatus = "In Progress"
+)
+
+type Task struct {
+	ID          string     `json:"id"  validate:"required"`
+	Title       string     `json:"title"  validate:"required"`
+	Description string     `json:"description"  validate:"required"`
+	DueDate     time.Time  `json:"due_date"  validate:"required"`
+	Status      TaskStatus `json:"status"  validate:"required"`
+}
+```
+
+## API Documentation
+The API documentation, including detailed information about each endpoint, request and response formats, and error handling, is available in the `docs/api_documentation.md` file.
+
+## Testing
+You can use Postman or any other API testing tool to interact with the Task Management REST API. The Postman collection for this API is available in the `docs/` directory.
+
+## Contributing
+If you find any issues or have suggestions for improvements, please feel free to open an issue or submit a pull request.
+
+## License
+This project is licensed under the [MIT License](LICENSE).
