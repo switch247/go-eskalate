@@ -105,6 +105,32 @@ type Task struct {
 ## API Documentation
 The API documentation, including detailed information about each endpoint, request and response formats, and error handling, is available in the `docs/api_documentation.md` file.
 
+## Validation
+The Task struct uses the github.com/go-playground/validator package to validate the input data. The validate tags on the struct fields ensure that the required fields are provided and in the correct format.
+
+Here's an example of how to use the validator:
+
+```
+// Create a new task
+task := &Task{
+	ID:          "1",
+	Title:       "Task 1",
+	Description: "This is a sample task",
+	DueDate:     time.Now().AddDate(0, 0, 30),
+	Status:      StatusPending,
+}
+
+// Validate the task
+err := validator.Validate(task)
+if err != nil {
+	// Handle validation errors
+	fmt.Println(err)
+	return
+}
+
+// The task is valid, you can proceed with creating it
+
+```
 ## Testing
 You can use Postman or any other API testing tool to interact with the Task Management REST API. The Postman collection for this API is available in the `docs/` directory.
 
