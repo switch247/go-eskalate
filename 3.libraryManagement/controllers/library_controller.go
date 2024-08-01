@@ -135,7 +135,7 @@ func (lc *LibraryControllerType) ConsoleInteraction() {
 		fmt.Println("6. List borrowed books")
 		fmt.Println("7. add a member")
 		fmt.Println("8. List all member")
-		fmt.Println("9. add list all books")
+		fmt.Println("9. list all books")
 		fmt.Println("0. Exit")
 		choice, _ := reader.ReadString('\n')
 		choice = string(choice[0])
@@ -167,6 +167,7 @@ func (lc *LibraryControllerType) ConsoleInteraction() {
 			fmt.Println("Invalid choice")
 		}
 		fmt.Println("================================================================================")
+		reader.ReadString('\n')
 		time.Sleep(2000)
 	}
 }
@@ -196,3 +197,29 @@ func getIntInput(prompt string) int {
 		fmt.Println("Invalid input. Please enter an integer.")
 	}
 }
+
+// int (){
+// var test
+// }
+
+// list(
+// 	LibraryService = int()
+// 	def(self) sort(){
+// 		self.LibraryService.test
+// 	}
+// ) //class
+// x = list([1,3,4,5,7])
+// x.sort()
+
+// LibraryService{
+// 	func test(){
+// 	}
+// }
+
+// controller{
+// 	LibraryService = LibraryService()
+// 	func (self *controller) chala(){
+// 		self.LibraryService.test()
+// 	}
+// 	LibraryService.test()
+// }
