@@ -1,5 +1,5 @@
 **API Documentation**  
-🚀 Get started hereThis template guides you through CRUD operations (GET, POST, PUT, DELETE), variables, and tests.  
+🚀 This API documentation provides an overview of the various endpoints and their corresponding CRUD (Create, Read, Update, Delete) operations. It also covers how to work with variables and how to run tests against the API.
 🔖 How to use this api
 
 - Step 1: Send requestsRESTful APIs allow you to perform CRUD operations using the POST, GET, PUT, and DELETE HTTP methods.This collection contains each of these request types. Open each request and click "Send" to see what happens.
