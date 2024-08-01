@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"main/data"
 	"main/models"
+	"main/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -52,6 +53,11 @@ func (tc *taskController) CreateTasks(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid or missing data", "error": err.Error()})
 		return
 	}
+	err := utils.ValidateStatus(&newTak)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid or missing data", "error": err.Error()})
+	}
+
 	//
 	task, err := tc.taskService.CreateTasks(&newTak)
 	if err != nil {
