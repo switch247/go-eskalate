@@ -77,6 +77,7 @@ func NewTaskService() (*TaskService, error) {
 	return ts, nil
 }
 
+// get all tasks
 func (ts *TaskService) GetTasks() ([]*models.Task, error, int) {
 	// ts.mu.RLock()
 	// defer ts.mu.RUnlock()
@@ -125,6 +126,7 @@ func (ts *TaskService) GetTasks() ([]*models.Task, error, int) {
 	return results, nil, 200
 }
 
+// create task
 func (ts *TaskService) CreateTasks(task *models.Task) (models.Task, error, int) {
 	// this needs some rework
 	insertResult, err := ts.collection.InsertOne(context.TODO(), task)
@@ -141,6 +143,7 @@ func (ts *TaskService) CreateTasks(task *models.Task) (models.Task, error, int) 
 	return *task, nil, 201
 }
 
+// get task by id
 func (ts *TaskService) GetTasksById(id string) (models.Task, error, int) {
 	filter := bson.D{{"id", id}}
 	var result models.Task
@@ -151,32 +154,49 @@ func (ts *TaskService) GetTasksById(id string) (models.Task, error, int) {
 	return result, nil, 200
 }
 
-func (ts *TaskService) UpdateTasksById(id string, task models.Task) (models.Task, error) {
-	updatedTask, ok := ts.tasks[id]
-	NewTask := models.Task{ID: id}
-	if ok == false {
-		return models.Task{}, errors.New("Task does not exists")
-	} else {
-		// Update only the specified fields
-		if updatedTask.Title != "" {
-			NewTask.Title = updatedTask.Title
-		}
-		if updatedTask.Description != "" {
-			NewTask.Description = updatedTask.Description
-		}
-		if updatedTask.Status != "" {
-			NewTask.Status = updatedTask.Status
-		}
-		if !updatedTask.DueDate.IsZero() {
-			NewTask.DueDate = updatedTask.DueDate
-		}
+// update task by id
+func (ts *TaskService) UpdateTasksById(id string, task models.Task) (models.Task, error, int) {
+	NewTask, err, statusCode := ts.GetTasksById(id)
 
-		ts.tasks[id] = &NewTask
-
-		return NewTask, nil
+	if err != nil {
+		return models.Task{}, errors.New("Task does not exists"), statusCode
 	}
+	// Update only the specified fields
+	if task.Title != "" {
+		NewTask.Title = task.Title
+	}
+	if task.Description != "" {
+		NewTask.Description = task.Description
+	}
+	if task.Status != "" {
+		NewTask.Status = task.Status
+	}
+	if !task.DueDate.IsZero() {
+		NewTask.DueDate = task.DueDate
+	}
+
+	filter := bson.D{{"id", id}}
+	update := bson.D{
+		{"$set", bson.D{
+			{"title", NewTask.Title},
+			{"description", NewTask.Description},
+			{"status", NewTask.Status},
+			{"due_date", NewTask.DueDate},
+		}},
+	}
+	updateResult, err := ts.collection.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		fmt.Println(err)
+		return models.Task{}, err, 500
+	}
+
+	fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
+
+	return NewTask, nil, 200
+
 }
 
+// delete task by id
 func (ts *TaskService) DeleteTasksById(id string) (error, int) {
 	filter := bson.D{{"id", id}}
 	_, err1, status := ts.GetTasksById(id)
