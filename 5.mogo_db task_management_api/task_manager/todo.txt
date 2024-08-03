@@ -1,5 +1,8 @@
 # Validate the correctness of data stored in MongoDB by retrieving and verifying task information.
 # Ensure that proper error handling is implemented for MongoDB operations, including network errors, database errors, and validation errors.
-# MongoDB offers various features such as indexes, aggregation pipelines, and transactions. While not required for this task, consider exploring these features for future enhancements to the API.
 
+# indexes,
+# transactions.
+
+#  aggregation pipelines(no place it is needed in this app)
 

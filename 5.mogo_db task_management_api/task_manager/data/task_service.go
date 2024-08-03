@@ -9,10 +9,11 @@ import (
 	"os"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"time"
+	// "time"
 
 	"errors"
 	"main/models"
@@ -34,7 +35,7 @@ type TaskService struct {
 	client     *mongo.Client
 	DataBase   *mongo.Database
 	collection *mongo.Collection
-	tasks      map[string]*models.Task
+	// tasks      map[string]*models.Task
 	// mu        sync.RWMutex //i will add this back once i understand routines properly
 }
 
@@ -63,24 +64,47 @@ func NewTaskService() (*TaskService, error) {
 
 	DataBase := client.Database("test")
 	collection := DataBase.Collection("tasks")
-
+	// collection.Drop(context.TODO()) //uncomment this tho drop collection
 	ts := &TaskService{
 		client:     client,
 		validator:  validator.New(),
 		DataBase:   DataBase,
 		collection: collection,
-		tasks:      make(map[string]*models.Task),
 	}
-	ts.tasks["1"] = &models.Task{ID: "1", Title: "Task 1", Description: "First task", DueDate: time.Now(), Status: "Pending"}
-	ts.tasks["2"] = &models.Task{ID: "2", Title: "Task 2", Description: "Second task", DueDate: time.Now().AddDate(0, 0, 1), Status: "In Progress"}
-	ts.tasks["3"] = &models.Task{ID: "3", Title: "Task 3", Description: "Third task", DueDate: time.Now().AddDate(0, 0, 2), Status: "Completed"}
+
 	return ts, nil
+}
+
+// create task
+func (ts *TaskService) CreateTasks(task *models.Task) (models.Task, error, int) {
+	// this needs some rework
+	insertResult, err := ts.collection.InsertOne(context.TODO(), task)
+	if err != nil {
+		fmt.Println(err)
+		return models.Task{}, err, 500
+	}
+
+	fetched, err, _ := ts.GetTasksById(insertResult.InsertedID.(primitive.ObjectID))
+	if err != nil {
+		// this should have status 500
+		return models.Task{}, errors.New("Task Not Created"), 500
+	}
+
+	fmt.Println("Inserted a single document: ", insertResult.InsertedID)
+	return fetched, nil, 201
 }
 
 // get all tasks
 func (ts *TaskService) GetTasks() ([]*models.Task, error, int) {
 	// ts.mu.RLock()
 	// defer ts.mu.RUnlock()
+	// Create an index on the "_id" field
+	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+		Keys: bson.D{{"_id", 1}},
+	})
+	if err1 != nil {
+		return nil, err1, 500
+	}
 
 	// Pass these options to the Find method
 	findOptions := options.Find()
@@ -126,26 +150,17 @@ func (ts *TaskService) GetTasks() ([]*models.Task, error, int) {
 	return results, nil, 200
 }
 
-// create task
-func (ts *TaskService) CreateTasks(task *models.Task) (models.Task, error, int) {
-	// this needs some rework
-	insertResult, err := ts.collection.InsertOne(context.TODO(), task)
-	if err != nil {
-		fmt.Println(err)
-		return models.Task{}, err, 500
-	}
-	_, err, _ = ts.GetTasksById(task.ID)
-	if err != nil {
-		// this should have status 500
-		return models.Task{}, errors.New("Task Not Created"), 500
-	}
-	fmt.Println("Inserted a single document: ", insertResult.InsertedID)
-	return *task, nil, 201
-}
-
 // get task by id
-func (ts *TaskService) GetTasksById(id string) (models.Task, error, int) {
-	filter := bson.D{{"id", id}}
+func (ts *TaskService) GetTasksById(id primitive.ObjectID) (models.Task, error, int) {
+	// Create an index on the "_id" field
+	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+		Keys: bson.D{{"_id", 1}},
+	})
+	if err1 != nil {
+		return models.Task{}, err1, 500
+	}
+
+	filter := bson.D{{"_id", id}}
 	var result models.Task
 	err := ts.collection.FindOne(context.TODO(), filter).Decode(&result)
 	if err != nil {
@@ -155,50 +170,88 @@ func (ts *TaskService) GetTasksById(id string) (models.Task, error, int) {
 }
 
 // update task by id
-func (ts *TaskService) UpdateTasksById(id string, task models.Task) (models.Task, error, int) {
-	NewTask, err, statusCode := ts.GetTasksById(id)
-
-	if err != nil {
-		return models.Task{}, errors.New("Task does not exists"), statusCode
-	}
-	// Update only the specified fields
-	if task.Title != "" {
-		NewTask.Title = task.Title
-	}
-	if task.Description != "" {
-		NewTask.Description = task.Description
-	}
-	if task.Status != "" {
-		NewTask.Status = task.Status
-	}
-	if !task.DueDate.IsZero() {
-		NewTask.DueDate = task.DueDate
-	}
-
-	filter := bson.D{{"id", id}}
-	update := bson.D{
-		{"$set", bson.D{
-			{"title", NewTask.Title},
-			{"description", NewTask.Description},
-			{"status", NewTask.Status},
-			{"due_date", NewTask.DueDate},
-		}},
-	}
-	updateResult, err := ts.collection.UpdateOne(context.TODO(), filter, update)
+// used transactions for this one
+func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task) (models.Task, error, int) {
+	// Start a session
+	session, err := ts.client.StartSession()
 	if err != nil {
 		fmt.Println(err)
 		return models.Task{}, err, 500
 	}
+	defer session.EndSession(context.Background())
 
-	fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
+	var NewTask models.Task
+	statusCode := 200
 
-	return NewTask, nil, 200
+	// Execute the transaction
+	err = mongo.WithSession(context.Background(), session, func(sc mongo.SessionContext) error {
+		// Start transaction
+		err = session.StartTransaction()
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
 
+		// Retrieve the existing task
+		NewTask, err, statusCode = ts.GetTasksById(id)
+		if err != nil {
+			_ = session.AbortTransaction(sc) // Roll back the transaction on error
+			return errors.New("task does not exist")
+		}
+
+		// Update only the specified fields
+		if task.Title != "" {
+			NewTask.Title = task.Title
+		}
+		if task.Description != "" {
+			NewTask.Description = task.Description
+		}
+		if task.Status != "" {
+			NewTask.Status = task.Status
+		}
+		if !task.DueDate.IsZero() {
+			NewTask.DueDate = task.DueDate
+		}
+
+		filter := bson.D{{"_id", id}}
+		update := bson.D{
+			{"$set", bson.D{
+				{"title", NewTask.Title},
+				{"description", NewTask.Description},
+				{"status", NewTask.Status},
+				{"due_date", NewTask.DueDate},
+			}},
+		}
+
+		updateResult, err := ts.collection.UpdateOne(sc, filter, update)
+		if err != nil {
+			_ = session.AbortTransaction(sc) // Roll back the transaction on error
+			fmt.Println(err)
+			return err
+		}
+
+		fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
+
+		// Commit the transaction
+		err = session.CommitTransaction(sc)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return models.Task{}, err, 500
+	}
+
+	return NewTask, nil, statusCode
 }
 
 // delete task by id
-func (ts *TaskService) DeleteTasksById(id string) (error, int) {
-	filter := bson.D{{"id", id}}
+func (ts *TaskService) DeleteTasksById(id primitive.ObjectID) (error, int) {
+	filter := bson.D{{"_id", id}}
 	_, err1, status := ts.GetTasksById(id)
 	if err1 != nil {
 		fmt.Println(err1)

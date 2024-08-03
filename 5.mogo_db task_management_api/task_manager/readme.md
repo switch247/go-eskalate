@@ -54,7 +54,6 @@ POST /tasks
 **Request body:**
 ```json
 {
-  "id": "1",
   "title": "Task 1",
   "description": "This is a sample task",
   "due_date": "2023-06-30",
@@ -94,7 +93,7 @@ const (
 )
 
 type Task struct {
-	ID          string     `json:"id"  validate:"required"`
+	ID primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	Title       string     `json:"title"  validate:"required"`
 	Description string     `json:"description"  validate:"required"`
 	DueDate     time.Time  `json:"due_date"  validate:"required"`
@@ -110,7 +109,6 @@ Here's an example of how to use the validator:
 ```
 // Create a new task
 task := &Task{
-	ID:          "1",
 	Title:       "Task 1",
 	Description: "This is a sample task",
 	DueDate:     time.Now().AddDate(0, 0, 30),

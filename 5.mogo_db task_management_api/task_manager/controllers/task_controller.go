@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type TaskController interface {
@@ -76,7 +77,12 @@ func (tc *taskController) CreateTasks(c *gin.Context) {
 func (tc *taskController) GetTasksById(c *gin.Context) {
 	id := c.Param("id")
 
-	task, err, statusCode := tc.taskService.GetTasksById(id)
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	task, err, statusCode := tc.taskService.GetTasksById(objectID)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -86,6 +92,11 @@ func (tc *taskController) GetTasksById(c *gin.Context) {
 
 func (tc *taskController) UpdateTasksById(c *gin.Context) {
 	id := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	var updatedTask models.Task
 
@@ -94,12 +105,12 @@ func (tc *taskController) UpdateTasksById(c *gin.Context) {
 		return
 	}
 	//validate status first
-	err := utils.ValidateStatus(&updatedTask)
-	if err != nil {
+	er := utils.ValidateStatus(&updatedTask)
+	if er != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid or missing data, allowed options are Pending, In Progress, and Completed", "error": err.Error()})
 		return
 	}
-	data, er, status := tc.taskService.UpdateTasksById(id, updatedTask)
+	data, er, status := tc.taskService.UpdateTasksById(objectID, updatedTask)
 	if er != nil {
 		c.IndentedJSON(status, gin.H{"error": er.Error()})
 		return
@@ -111,8 +122,13 @@ func (tc *taskController) UpdateTasksById(c *gin.Context) {
 
 func (tc *taskController) DeleteTasksById(c *gin.Context) {
 	id := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-	err, statusCode := tc.taskService.DeleteTasksById(id)
+	err, statusCode := tc.taskService.DeleteTasksById(objectID)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
