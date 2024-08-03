@@ -1,5 +1,3 @@
-Sure, here's the updated README file with the changes you requested:
-
 # Task Management REST API
 
 ## Introduction
@@ -8,6 +6,7 @@ This is a simple Task Management REST API built using the Go programming languag
 ## Prerequisites
 - Go (version 1.16 or higher)
 - Gin web framework (`go get -u github.com/gin-gonic/gin`)
+- MongoDB (version 3.6 or higher)
 
 ## Getting Started
 
@@ -21,12 +20,17 @@ git clone https://github.com/your-username/task-manager.git
 cd task-manager
 ```
 
-3. Build the application:
+3. Set the MongoDB connection string environment variable:
+```
+$env:MONGO_CONNECTION_STRING = "<replace here with your mongo connection string>"
+```
+
+4. Build the application:
 ```
 go build -o task-manager ./main.go
 ```
 
-4. Run the application:
+5. Run the application:
 ```
 ./task-manager
 ```
@@ -84,20 +88,13 @@ DELETE /tasks/{id}
 The `Task` struct, defined in the `models` package, has the following fields:
 
 ```go
-type TaskStatus string
-
-const (
-	StatusPending   TaskStatus = "Pending"
-	StatusCompleted TaskStatus = "Completed"
-	StatusInProgress TaskStatus = "In Progress"
-)
 
 type Task struct {
 	ID primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	Title       string     `json:"title"  validate:"required"`
 	Description string     `json:"description"  validate:"required"`
 	DueDate     time.Time  `json:"due_date"  validate:"required"`
-	Status      TaskStatus `json:"status"  validate:"required"`
+	Status      string `json:"status"  validate:"required"`
 }
 ```
 
@@ -109,7 +106,6 @@ Here's an example of how to use the validator:
 ```
 // Create a new task
 task := &Task{
-	Title:       "Task 1",
 	Description: "This is a sample task",
 	DueDate:     time.Now().AddDate(0, 0, 30),
 	Status:      StatusPending,
@@ -138,3 +134,5 @@ If you find any issues or have suggestions for improvements, please feel free to
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
+
+Note: Make sure to replace `<replace here with your mongo connection string>` with your actual MongoDB connection string.

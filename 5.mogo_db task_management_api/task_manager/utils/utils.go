@@ -20,7 +20,7 @@ func ReadJSON(ctx *gin.Context) (map[string]interface{}, error) {
 }
 
 func ValidateStatus(t *models.Task) error {
-	validStatus := []models.TaskStatus{models.StatusPending, models.StatusCompleted, models.StatusCancelled}
+	validStatus := []models.TaskStatus{models.StatusPending, models.StatusCompleted, models.StatusInProgress}
 	for _, status := range validStatus {
 		if t.Status == status {
 			return nil

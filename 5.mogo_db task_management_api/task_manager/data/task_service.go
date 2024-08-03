@@ -4,20 +4,19 @@ import (
 
 	// "strconv"
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"time"
+
+	"main/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
-	// "time"
-
-	"errors"
-	"main/models"
-	"net/http"
 
 	"github.com/go-playground/validator"
 )
@@ -35,7 +34,6 @@ type TaskService struct {
 	client     *mongo.Client
 	DataBase   *mongo.Database
 	collection *mongo.Collection
-	// tasks      map[string]*models.Task
 	// mu        sync.RWMutex //i will add this back once i understand routines properly
 }
 
@@ -77,21 +75,63 @@ func NewTaskService() (*TaskService, error) {
 
 // create task
 func (ts *TaskService) CreateTasks(task *models.Task) (models.Task, error, int) {
-	// this needs some rework
-	insertResult, err := ts.collection.InsertOne(context.TODO(), task)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	session, err := ts.client.StartSession()
+	if err != nil {
+		return models.Task{}, err, 500
+	}
+	defer session.EndSession(ctx)
+
+	resultTask := models.Task{}
+	err = mongo.WithSession(ctx, session, func(sc mongo.SessionContext) error {
+		err := session.StartTransaction()
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+
+		insertResult, err := ts.collection.InsertOne(sc, task)
+		if err != nil {
+			fmt.Println(err)
+			session.AbortTransaction(sc)
+			return err
+		}
+		// Fetch the inserted task
+		var fetched models.Task
+		err = ts.collection.FindOne(sc, bson.D{{"_id", insertResult.InsertedID.(primitive.ObjectID)}}).Decode(&fetched)
+
+		// fetched, err, _ := ts.GetTasksById(insertResult.InsertedID.(primitive.ObjectID))
+		if err != nil {
+			fmt.Println(err)
+			session.AbortTransaction(sc)
+			return errors.New("Task Not Created")
+		}
+		var date_not_match = !fetched.DueDate.Equal(task.DueDate.In(fetched.DueDate.Location()))
+		if fetched.Title != task.Title || fetched.Description != task.Description || fetched.Status != task.Status || date_not_match {
+			session.AbortTransaction(sc)
+			return errors.New("Task Not Created")
+		}
+
+		err = session.CommitTransaction(sc)
+		if err != nil {
+			fmt.Println(err)
+
+			return err
+		}
+
+		resultTask = fetched
+		return nil
+	})
+
 	if err != nil {
 		fmt.Println(err)
 		return models.Task{}, err, 500
 	}
 
-	fetched, err, _ := ts.GetTasksById(insertResult.InsertedID.(primitive.ObjectID))
-	if err != nil {
-		// this should have status 500
-		return models.Task{}, errors.New("Task Not Created"), 500
-	}
-
-	fmt.Println("Inserted a single document: ", insertResult.InsertedID)
-	return fetched, nil, 201
+	fmt.Println("Inserted a single document: ", resultTask.ID)
+	return resultTask, nil, 201
 }
 
 // get all tasks
@@ -229,6 +269,9 @@ func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task) 
 			fmt.Println(err)
 			return err
 		}
+		if updateResult.ModifiedCount == 0 {
+			return errors.New("task does not exist")
+		}
 
 		fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
 
@@ -252,15 +295,14 @@ func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task) 
 // delete task by id
 func (ts *TaskService) DeleteTasksById(id primitive.ObjectID) (error, int) {
 	filter := bson.D{{"_id", id}}
-	_, err1, status := ts.GetTasksById(id)
-	if err1 != nil {
-		fmt.Println(err1)
-		return errors.New("Task does not exist"), status
-	}
+
 	deleteResult, err := ts.collection.DeleteOne(context.TODO(), filter)
 	if err != nil {
 		fmt.Println(err)
 		return err, 500
+	}
+	if deleteResult.DeletedCount != 0 {
+		return errors.New("Task does not exist"), http.StatusNotFound
 	}
 	fmt.Printf("Deleted %v documents in the trainers collection\n", deleteResult.DeletedCount)
 	return nil, 200

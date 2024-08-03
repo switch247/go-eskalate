@@ -7,7 +7,12 @@
 - Step 2: View responsesObserve the response tab for status code (200 OK), response time, and size.
     
 - Step 3: Send new Body dataUpdate or add new data in "Body" in the POST request. Typically, Body data is also used in PUT request.
-    
+
+## Connecting to MongoDB
+### To connect to MongoDB, you will need to:
+    1. Install MongoDB: Download and install MongoDB on your local machine.
+    2. Create a MongoDB Database: Create a new database and collection in MongoDB.
+    3. Update API Connection: Update the API connection settings to point to your local MongoDB instance.
 
 | **Route** | **Description** | **HTTP Method** | **Path** | **Request Body** | **Response** |
 | --- | --- | --- | --- | --- | --- |
