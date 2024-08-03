@@ -25,14 +25,10 @@ cd task-manager
 $env:MONGO_CONNECTION_STRING = "<replace here with your mongo connection string>"
 ```
 
-4. Build the application:
-```
-go build -o task-manager ./main.go
-```
 
-5. Run the application:
+4. Run the application:
 ```
-./task-manager
+go run .
 ```
 
 The API will start running on `http://localhost:8080`.
