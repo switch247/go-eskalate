@@ -118,7 +118,7 @@ func (ts *UserService) CreateUsers(user *models.User) (models.User, error, int) 
 }
 
 // get all users
-func (ts *UserService) GetUsers() ([]*models.User, error, int) {
+func (ts *UserService) GetUsers() ([]*models.OmitedUser, error, int) {
 	// ts.mu.RLock()
 	// defer ts.mu.RUnlock()
 	// Create an index on the "_id" field
@@ -135,13 +135,13 @@ func (ts *UserService) GetUsers() ([]*models.User, error, int) {
 	filter := bson.D{{}}
 
 	// Here's an array in which you can store the decoded documents
-	var results []*models.User
+	var results []*models.OmitedUser
 
 	// Passing bson.D{{}} as the filter matches all documents in the collection
 	cur, err := ts.collection.Find(context.TODO(), filter, findOptions)
 	if err != nil {
 		log.Fatal(err)
-		return []*models.User{}, err, 0
+		return []*models.OmitedUser{}, err, 0
 	}
 
 	// Finding multiple documents returns a cursor
@@ -149,13 +149,13 @@ func (ts *UserService) GetUsers() ([]*models.User, error, int) {
 	for cur.Next(context.TODO()) {
 
 		// create a value into which the single document can be decoded
-		var elem models.User
+		var elem models.OmitedUser
 		err := cur.Decode(&elem)
 		if err != nil {
 			fmt.Println(err.Error())
 			// #handelthislater
 			// should this say there was a decoding error and return?
-			return []*models.User{}, err, 500
+			return []*models.OmitedUser{}, err, 500
 		}
 
 		results = append(results, &elem)
@@ -163,7 +163,7 @@ func (ts *UserService) GetUsers() ([]*models.User, error, int) {
 
 	if err := cur.Err(); err != nil {
 		fmt.Println(err)
-		return []*models.User{}, err, 500
+		return []*models.OmitedUser{}, err, 500
 	}
 
 	// Close the cursor once finished

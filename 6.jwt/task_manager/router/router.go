@@ -39,6 +39,15 @@ func NewRouter() *gin.Engine {
 		taskRouter.PUT("/:id", taskController.UpdateTasksById)
 		taskRouter.DELETE("/:id", taskController.DeleteTasksById)
 	}
+	userRouter := r.Group("/users", middleware.AuthMiddleware())
+	{
+		userController, err := controllers.NewUserController()
+		if err != nil {
+			return nil
+		}
+		userRouter.GET("", userController.GetUsers)
+		userRouter.GET("/:id", userController.GetUser)
+	}
 
 	return r
 }
