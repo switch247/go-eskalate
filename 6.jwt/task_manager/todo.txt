@@ -1,0 +1,8 @@
+# Validate the correctness of data stored in MongoDB by retrieving and verifying task information.
+# Ensure that proper error handling is implemented for MongoDB operations, including network errors, database errors, and validation errors.
+
+# indexes,
+# transactions.
+
+#  aggregation pipelines(no place it is needed in this app)
+
