@@ -59,6 +59,15 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		IsAdmin, ok := claims["is_admin"].(bool)
+		if !ok {
+			c.JSON(500, gin.H{"error": "Failed to parse user ID"})
+			c.Abort()
+			return
+
+		}
+		c.Set("user_id", userID)
+		c.Set("is_admin", IsAdmin)
 
 		c.Next()
 	}
