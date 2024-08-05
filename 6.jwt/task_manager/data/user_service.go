@@ -174,39 +174,39 @@ func (ts *UserService) GetUsers() ([]*models.OmitedUser, error, int) {
 }
 
 // get user by id
-func (ts *UserService) GetUsersById(id primitive.ObjectID) (models.User, error, int) {
+func (ts *UserService) GetUsersById(id primitive.ObjectID) (models.OmitedUser, error, int) {
 	// Create an index on the "_id" field
 	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
 		Keys: bson.D{{"_id", 1}},
 	})
 	if err1 != nil {
-		return models.User{}, err1, 500
+		return models.OmitedUser{}, err1, 500
 	}
 
 	filter := bson.D{{"_id", id}}
-	var result models.User
+	var result models.OmitedUser
 	err := ts.collection.FindOne(context.TODO(), filter).Decode(&result)
 	if err != nil {
-		return models.User{}, errors.New("User not found"), http.StatusNotFound
+		return models.OmitedUser{}, errors.New("User not found"), http.StatusNotFound
 	}
 	return result, nil, 200
 }
 
 // get user by id
-func (ts *UserService) GetUsersByEmail(email string) (models.User, error, int) {
+func (ts *UserService) GetUsersByEmail(email string) (models.OmitedUser, error, int) {
 	// Create an index on the "_id" field
 	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
 		Keys: bson.D{{"email", 1}},
 	})
 	if err1 != nil {
-		return models.User{}, err1, 500
+		return models.OmitedUser{}, err1, 500
 	}
 
 	filter := bson.D{{"email", email}}
-	var result models.User
+	var result models.OmitedUser
 	err := ts.collection.FindOne(context.TODO(), filter).Decode(&result)
 	if err != nil {
-		return models.User{}, errors.New("User not found"), http.StatusNotFound
+		return models.OmitedUser{}, errors.New("User not found"), http.StatusNotFound
 	}
 	return result, nil, 200
 }
@@ -282,19 +282,19 @@ func (ts *UserService) GetUsersByEmail(email string) (models.User, error, int) {
 // 	return NewUser, nil, statusCode
 // }
 
-// // delete user by id
-// func (ts *UserService) DeleteUsersById(id primitive.ObjectID) (error, int) {
-// 	filter := bson.D{{"_id", id}}
+// delete user by id
+func (ts *UserService) DeleteUsersById(id primitive.ObjectID) (error, int) {
+	filter := bson.D{{"_id", id}}
 
-// 	deleteResult, err := ts.collection.DeleteOne(context.TODO(), filter)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return err, 500
-// 	}
-// 	if deleteResult.DeletedCount != 0 {
-// 		return errors.New("User does not exist"), http.StatusNotFound
-// 	}
-// 	fmt.Printf("Deleted %v documents in the trainers collection\n", deleteResult.DeletedCount)
-// 	return nil, 200
+	deleteResult, err := ts.collection.DeleteOne(context.TODO(), filter)
+	if err != nil {
+		fmt.Println(err)
+		return err, 500
+	}
+	if deleteResult.DeletedCount == 0 {
+		return errors.New("User does not exist"), http.StatusNotFound
+	}
+	fmt.Printf("Deleted %v documents in the trainers collection\n", deleteResult.DeletedCount)
+	return nil, 200
 
-// }
+}

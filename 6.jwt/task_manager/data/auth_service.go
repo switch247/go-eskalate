@@ -111,7 +111,7 @@ func SignJwt(existingUser models.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": existingUser.ID,
 		"email":   existingUser.Email,
-		"exp":     time.Now().Add(time.Minute).Unix(),
+		"exp":     time.Now().Add(time.Minute * 10).Unix(),
 		// for the purpose of this task, we will set the expiration time to 1 minute
 	})
 

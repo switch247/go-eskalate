@@ -47,6 +47,7 @@ func NewRouter() *gin.Engine {
 		}
 		userRouter.GET("", userController.GetUsers)
 		userRouter.GET("/:id", userController.GetUser)
+		userRouter.DELETE("/:id", userController.DeleteUser)
 	}
 
 	return r
