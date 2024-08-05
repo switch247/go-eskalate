@@ -201,7 +201,7 @@ func (ts *TaskService) GetTasksById(id primitive.ObjectID) (models.Task, error, 
 
 // update task by id
 // used transactions for this one
-func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task) (models.Task, error, int) {
+func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task, userid primitive.ObjectID) (models.Task, error, int) {
 	// Start a session
 	session, err := ts.client.StartSession()
 	if err != nil {
@@ -228,7 +228,17 @@ func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task) 
 			_ = session.AbortTransaction(sc) // Roll back the transaction on error
 			return errors.New("task does not exist")
 		}
+		val, err := primitive.ObjectIDFromHex(NewTask.User_ID)
+		if err != nil {
+			_ = session.AbortTransaction(sc) // Roll back the transaction on error
+			return errors.New("task does not exist")
+		}
 
+		if userid != val {
+			_ = session.AbortTransaction(sc) // Roll back the transaction on error
+			statusCode = http.StatusUnauthorized
+			return errors.New("user does not have permission to update this task")
+		}
 		// Update only the specified fields
 		if task.Title != "" {
 			NewTask.Title = task.Title
@@ -242,6 +252,10 @@ func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task) 
 		if !task.DueDate.IsZero() {
 			NewTask.DueDate = task.DueDate
 		}
+		if task.User_ID != "" {
+			fmt.Println("user id", task.User_ID)
+			NewTask.User_ID = task.User_ID
+		}
 
 		filter := bson.D{{"_id", id}}
 		update := bson.D{
@@ -250,6 +264,7 @@ func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task) 
 				{"description", NewTask.Description},
 				{"status", NewTask.Status},
 				{"due_date", NewTask.DueDate},
+				{"user_id", NewTask.User_ID},
 			}},
 		}
 
@@ -259,7 +274,9 @@ func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task) 
 			fmt.Println(err)
 			return err
 		}
+
 		if updateResult.ModifiedCount == 0 {
+			fmt.Println("Task does not exist")
 			return errors.New("task does not exist")
 		}
 
@@ -283,8 +300,23 @@ func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task) 
 }
 
 // delete task by id
-func (ts *TaskService) DeleteTasksById(id primitive.ObjectID) (error, int) {
+func (ts *TaskService) DeleteTasksById(id primitive.ObjectID, userid primitive.ObjectID) (error, int) {
 	filter := bson.D{{"_id", id}}
+
+	// Retrieve the existing task
+	NewTask, err, statusCode := ts.GetTasksById(id)
+	if err != nil {
+		return errors.New("task does not exist"), statusCode
+	}
+
+	val, err := primitive.ObjectIDFromHex(NewTask.User_ID)
+	if err != nil {
+		return errors.New("task does not exist"), 404
+	}
+
+	if userid != val {
+		return errors.New("user does not have permission to update this task"), 403
+	}
 
 	deleteResult, err := ts.collection.DeleteOne(context.TODO(), filter)
 	if err != nil {

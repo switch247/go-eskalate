@@ -38,6 +38,7 @@ func NewAuthService() (*AuthService, error) {
 	client, err := config.GetClient()
 	DataBase := client.Database("test")
 	_collection := DataBase.Collection("users")
+	// _collection.Drop(context.TODO()) //uncomment this tho drop collection
 	if err == nil {
 		return &AuthService{
 			validator:  validator.New(),

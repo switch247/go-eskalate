@@ -33,11 +33,11 @@ func NewRouter() *gin.Engine {
 		if err != nil {
 			return nil
 		}
-		taskRouter.GET("", taskController.GetAllTasks)
-		taskRouter.POST("", taskController.CreateTasks)
+		taskRouter.GET("", middleware.UserMiddleware(), taskController.GetAllTasks)
+		taskRouter.POST("", middleware.UserMiddleware(), taskController.CreateTasks)
 		taskRouter.GET("/:id", taskController.GetTasksById)
-		taskRouter.PUT("/:id", taskController.UpdateTasksById)
-		taskRouter.DELETE("/:id", taskController.DeleteTasksById)
+		taskRouter.PUT("/:id", middleware.UserMiddleware(), taskController.UpdateTasksById)
+		taskRouter.DELETE("/:id", middleware.UserMiddleware(), taskController.DeleteTasksById)
 	}
 	userRouter := r.Group("/users", middleware.AuthMiddleware())
 	{
