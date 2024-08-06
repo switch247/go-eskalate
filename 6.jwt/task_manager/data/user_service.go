@@ -20,6 +20,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/go-playground/validator"
 )
@@ -58,64 +59,41 @@ func NewUserService() (*UserService, error) {
 }
 
 // create user
-func (ts *UserService) CreateUsers(user *models.User) (models.User, error, int) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+func (as *UserService) CreateUsers(user *models.User) (models.OmitedUser, error, int) {
+	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
 	defer cancel()
-
-	session, err := ts.client.StartSession()
+	// Check if user email is taken
+	existingUserFilter := bson.D{{"email", user.Email}}
+	existingUserCount, err := as.collection.CountDocuments(context.TODO(), existingUserFilter)
 	if err != nil {
-		return models.User{}, err, 500
+		return models.OmitedUser{}, err, 500
 	}
-	defer session.EndSession(ctx)
-
-	resultTask := models.User{}
-	err = mongo.WithSession(ctx, session, func(sc mongo.SessionContext) error {
-		err := session.StartTransaction()
-		if err != nil {
-			fmt.Println(err)
-			return err
-		}
-
-		insertResult, err := ts.collection.InsertOne(sc, user)
-		if err != nil {
-			fmt.Println(err)
-			session.AbortTransaction(sc)
-			return err
-		}
-		// Fetch the inserted user
-		var fetched models.User
-		err = ts.collection.FindOne(sc, bson.D{{"_id", insertResult.InsertedID.(primitive.ObjectID)}}).Decode(&fetched)
-
-		// fetched, err, _ := ts.GetUsersById(insertResult.InsertedID.(primitive.ObjectID))
-		if err != nil {
-			fmt.Println(err)
-			session.AbortTransaction(sc)
-			return errors.New("User Not Created")
-		}
-
-		if fetched.Email != user.Email {
-			session.AbortTransaction(sc)
-			return errors.New("User Not Created")
-		}
-
-		err = session.CommitTransaction(sc)
-		if err != nil {
-			fmt.Println(err)
-
-			return err
-		}
-
-		resultTask = fetched
-		return nil
-	})
-
+	if existingUserCount > 0 {
+		return models.OmitedUser{}, errors.New("Email is already taken"), http.StatusBadRequest
+	}
+	// User registration logic
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return models.OmitedUser{}, err, 500
+	}
+	user.Password = string(hashedPassword)
+	insertResult, err := as.collection.InsertOne(context.TODO(), user)
+	if err != nil {
+		return models.OmitedUser{}, err, 500
+	}
+	// Fetch the inserted task
+	var fetched models.OmitedUser
+	err = as.collection.FindOne(context.TODO(), bson.D{{"_id", insertResult.InsertedID.(primitive.ObjectID)}}).Decode(&fetched)
 	if err != nil {
 		fmt.Println(err)
-		return models.User{}, err, 500
+		return models.OmitedUser{}, errors.New("User Not Created"), 500
 	}
-
-	fmt.Println("Inserted a single document: ", resultTask.ID)
-	return resultTask, nil, 201
+	if fetched.Email != user.Email {
+		return models.OmitedUser{}, errors.New("User Not Created"), 500
+	}
+	fetched.Password = ""
+	return fetched, nil, 200
 }
 
 // get all users

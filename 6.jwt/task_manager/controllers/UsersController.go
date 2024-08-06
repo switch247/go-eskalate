@@ -1,15 +1,14 @@
 package controllers
 
 import (
-	// "fmt"
-	// "errors"
-	// "main/models"
+	"fmt"
 	"main/data"
 	"main/models"
 	"main/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -22,7 +21,7 @@ type UserController interface {
 }
 
 type userController struct {
-	authService data.UserService
+	userService data.UserService
 }
 
 func NewUserController() (*userController, error) {
@@ -31,12 +30,12 @@ func NewUserController() (*userController, error) {
 		return nil, err
 	}
 	return &userController{
-		authService: *service_reference,
+		userService: *service_reference,
 	}, nil
 }
 func (uc *userController) GetUsers(c *gin.Context) {
 
-	users, err, statusCode := uc.authService.GetUsers()
+	users, err, statusCode := uc.userService.GetUsers()
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -56,7 +55,7 @@ func (uc *userController) GetUser(c *gin.Context) {
 		c.IndentedJSON(400, gin.H{"error": "Invalid ID"})
 		return
 	}
-	user, err, statusCode := uc.authService.GetUsersById(objectID, user)
+	user, err, statusCode := uc.userService.GetUsersById(objectID, user)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -70,11 +69,18 @@ func (uc *userController) CreateUser(c *gin.Context) {
 		c.IndentedJSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	user, err, statusCode := uc.authService.CreateUsers(&user)
+	v := validator.New()
+	if err := v.Struct(user); err != nil {
+		fmt.Printf(err.Error())
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid or missing data", "error": err.Error()})
+		return
+	}
+
+	OmitedUser, err, statusCode := uc.userService.CreateUsers(&user)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
-		c.IndentedJSON(statusCode, gin.H{"user": user})
+		c.IndentedJSON(statusCode, gin.H{"user": OmitedUser})
 	}
 }
 
@@ -95,7 +101,7 @@ func (uc *userController) UpdateUser(c *gin.Context) {
 		c.IndentedJSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	OmitedUser, err, statusCode := uc.authService.UpdateUsersById(objectID, user, logeduser)
+	OmitedUser, err, statusCode := uc.userService.UpdateUsersById(objectID, user, logeduser)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -116,7 +122,7 @@ func (uc *userController) DeleteUser(c *gin.Context) {
 		c.IndentedJSON(400, gin.H{"error": "Invalid ID"})
 		return
 	}
-	err, statusCode := uc.authService.DeleteUsersById(objectID, user)
+	err, statusCode := uc.userService.DeleteUsersById(objectID, user)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
