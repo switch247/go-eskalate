@@ -44,13 +44,25 @@ func (tc *taskController) GetAllTasks(c *gin.Context) {
 		c.Abort()
 		return
 	}
+	UserobjectID, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid user ID", "error": err.Error()})
+		return
+	}
+
+	is_admin, ok := c.Get("is_admin")
+	if !ok {
+		c.JSON(500, gin.H{"error": "Failed to retrieve role"})
+		c.Abort()
+		return
+	}
 	// Display the user ID
 	fmt.Println(userID)
 
 	// var newTak models.Task
 	// v := validator.New()
 	// fmt.Print(v, newTak)
-	tasks, err, statusCode := tc.taskService.GetTasks()
+	tasks, err, statusCode := tc.taskService.GetTasks(UserobjectID, is_admin.(bool))
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 		return
@@ -98,6 +110,24 @@ func (tc *taskController) CreateTasks(c *gin.Context) {
 }
 
 func (tc *taskController) GetTasksById(c *gin.Context) {
+	userID, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(500, gin.H{"error": "Failed to retrieve user ID"})
+		c.Abort()
+		return
+	}
+	UserobjectID, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid user ID", "error": err.Error()})
+		return
+	}
+
+	is_admin, ok := c.Get("is_admin")
+	if !ok {
+		c.JSON(500, gin.H{"error": "Failed to retrieve role"})
+		c.Abort()
+		return
+	}
 	id := c.Param("id")
 
 	objectID, err := primitive.ObjectIDFromHex(id)
@@ -105,7 +135,7 @@ func (tc *taskController) GetTasksById(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	task, err, statusCode := tc.taskService.GetTasksById(objectID)
+	task, err, statusCode := tc.taskService.GetTasksById(objectID, UserobjectID, is_admin.(bool))
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -120,18 +150,24 @@ func (tc *taskController) UpdateTasksById(c *gin.Context) {
 		c.Abort()
 		return
 	}
+	UserobjectID, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid user ID", "error": err.Error()})
+		return
+	}
+
+	is_admin, ok := c.Get("is_admin")
+	if !ok {
+		c.JSON(500, gin.H{"error": "Failed to retrieve role"})
+		c.Abort()
+		return
+	}
 	fmt.Printf("User: %v:", userID)
 
 	id := c.Param("id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	UserobjectID, err := primitive.ObjectIDFromHex(userID.(string))
-	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid user ID", "error": err.Error()})
 		return
 	}
 
@@ -147,7 +183,8 @@ func (tc *taskController) UpdateTasksById(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid or missing data, allowed options are Pending, In Progress, and Completed", "error": err.Error()})
 		return
 	}
-	data, er, status := tc.taskService.UpdateTasksById(objectID, updatedTask, UserobjectID)
+
+	data, er, status := tc.taskService.UpdateTasksById(objectID, updatedTask, UserobjectID, is_admin.(bool))
 	if er != nil {
 		c.IndentedJSON(status, gin.H{"error": er.Error()})
 		return
@@ -164,6 +201,7 @@ func (tc *taskController) DeleteTasksById(c *gin.Context) {
 		c.Abort()
 		return
 	}
+
 	id := c.Param("id")
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -176,7 +214,12 @@ func (tc *taskController) DeleteTasksById(c *gin.Context) {
 		return
 	}
 
-	err, statusCode := tc.taskService.DeleteTasksById(objectID, UserobjectID)
+	is_admin, ok := c.Get("is_admin")
+	if !ok {
+		c.JSON(500, gin.H{"error": "Failed to retrieve role"})
+		c.Abort()
+	}
+	err, statusCode := tc.taskService.DeleteTasksById(objectID, UserobjectID, is_admin.(bool))
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
