@@ -1,1 +1,1 @@
-[Postman Documentation](https://documenter.getpostman.com/view/28775980/2sA3rxrZm9){:target="_blank"}{:autolink}
+[Postman Documentation](https://documenter.getpostman.com/view/28775980/2sA3rxrZm9)
