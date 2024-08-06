@@ -16,6 +16,15 @@ var JwtSecret = []byte("your_jwt_secret")
 var _client *mongo.Client
 var _err error = nil
 
+func init() {
+	JwtSecretKey := os.Getenv("JWT_SECRETE_KEY")
+	if JwtSecretKey != "" {
+		JwtSecret = []byte(JwtSecretKey)
+	} else {
+		log.Fatal("JWT secret key not configured")
+	}
+}
+
 func MongoInit() (*mongo.Client, error) {
 	// Read MONGO_CONNECTION_STRING from environment
 	MONGO_CONNECTION_STRING := os.Getenv("MONGO_CONNECTION_STRING")
