@@ -339,7 +339,7 @@ func (ts *TaskService) DeleteTasksById(id primitive.ObjectID, user models.Omited
 		fmt.Println(err)
 		return err, 500
 	}
-	if deleteResult.DeletedCount != 0 {
+	if deleteResult.DeletedCount == 0 {
 		return errors.New("Task does not exist"), http.StatusNotFound
 	}
 	fmt.Printf("Deleted %v documents in the trainers collection\n", deleteResult.DeletedCount)
