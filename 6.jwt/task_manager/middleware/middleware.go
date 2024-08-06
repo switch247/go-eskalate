@@ -72,3 +72,16 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func IsAdminMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		// userID,err := c.Set("user_id" )
+		IsAdmin, ok := c.Get("is_admin")
+
+		if ok == true && IsAdmin.(bool) == true {
+			c.Next()
+		}
+
+	}
+}

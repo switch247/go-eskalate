@@ -14,6 +14,7 @@ import (
 
 	"main/config"
 	"main/models"
+	"main/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -174,7 +175,7 @@ func (ts *UserService) GetUsers() ([]*models.OmitedUser, error, int) {
 }
 
 // get user by id
-func (ts *UserService) GetUsersById(id primitive.ObjectID) (models.OmitedUser, error, int) {
+func (ts *UserService) GetUsersById(id primitive.ObjectID, user models.OmitedUser) (models.OmitedUser, error, int) {
 	// Create an index on the "_id" field
 	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
 		Keys: bson.D{{"_id", 1}},
@@ -182,12 +183,23 @@ func (ts *UserService) GetUsersById(id primitive.ObjectID) (models.OmitedUser, e
 	if err1 != nil {
 		return models.OmitedUser{}, err1, 500
 	}
+	var filter bson.D
+	if user.Is_Admin == false {
+		userIdString := utils.ObjectIdToString(user.ID)
+		filter = bson.D{{"_id", id}, {"user_id", userIdString}}
 
-	filter := bson.D{{"_id", id}}
+	} else {
+
+		filter = bson.D{{"_id", id}}
+	}
 	var result models.OmitedUser
 	err := ts.collection.FindOne(context.TODO(), filter).Decode(&result)
 	if err != nil {
 		return models.OmitedUser{}, errors.New("User not found"), http.StatusNotFound
+	}
+	if user.Is_Admin == false && result.ID != user.ID {
+		return models.OmitedUser{}, errors.New("permission denied"), http.StatusForbidden
+
 	}
 	return result, nil, 200
 }
@@ -213,78 +225,86 @@ func (ts *UserService) GetUsersByEmail(email string) (models.OmitedUser, error, 
 
 // update user by id
 // used transactions for this one
-// func (ts *UserService) UpdateUsersById(id primitive.ObjectID, user models.User) (models.User, error, int) {
-// 	// Start a session
-// 	session, err := ts.client.StartSession()
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return models.User{}, err, 500
-// 	}
-// 	defer session.EndSession(context.Background())
 
-// 	var NewUser models.User
-// 	statusCode := 200
+func (ts *UserService) UpdateUsersById(id primitive.ObjectID, user models.User, curentuser models.OmitedUser) (models.OmitedUser, error, int) {
+	// Start a session
+	session, err := ts.client.StartSession()
+	if err != nil {
+		fmt.Println(err)
+		return models.OmitedUser{}, err, 500
+	}
+	defer session.EndSession(context.Background())
 
-// 	// Execute the transaction
-// 	err = mongo.WithSession(context.Background(), session, func(sc mongo.SessionContext) error {
-// 		// Start transaction
-// 		err = session.StartTransaction()
-// 		if err != nil {
-// 			fmt.Println(err)
-// 			return err
-// 		}
+	var NewUser models.OmitedUser
+	statusCode := 200
 
-// 		// Retrieve the existing user
-// 		NewUser, err, statusCode = ts.GetUsersById(id)
-// 		if err != nil {
-// 			_ = session.AbortTransaction(sc) // Roll back the transaction on error
-// 			return errors.New("user does not exist")
-// 		}
+	// Execute the transaction
+	err = mongo.WithSession(context.Background(), session, func(sc mongo.SessionContext) error {
+		// Start transaction
+		err = session.StartTransaction()
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
 
-// 		// Update only the specified fields
-// 		if user.Email != "" {
-// 			NewUser.Email = user.Email
-// 		}
+		// Retrieve the existing user
+		NewUser, err, statusCode = ts.GetUsersById(id, curentuser)
+		if err != nil {
+			_ = session.AbortTransaction(sc) // Roll back the transaction on error
+			return err
+		}
 
-// 		filter := bson.D{{"_id", id}}
-// 		update := bson.D{
-// 			{"$set", bson.D{
-// 				{"title", NewUser.Email},
-// 			}},
-// 		}
+		// Update only the specified fields
+		if user.Email != "" {
+			NewUser.Email = user.Email
+		}
 
-// 		updateResult, err := ts.collection.UpdateOne(sc, filter, update)
-// 		if err != nil {
-// 			_ = session.AbortTransaction(sc) // Roll back the transaction on error
-// 			fmt.Println(err)
-// 			return err
-// 		}
-// 		if updateResult.ModifiedCount == 0 {
-// 			return errors.New("user does not exist")
-// 		}
+		filter := bson.D{{"_id", id}}
+		update := bson.D{
+			{"$set", bson.D{
+				{"title", NewUser.Email},
+			}},
+		}
 
-// 		fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
+		updateResult, err := ts.collection.UpdateOne(sc, filter, update)
+		if err != nil {
+			_ = session.AbortTransaction(sc) // Roll back the transaction on error
+			fmt.Println(err)
+			statusCode = 500
+			return err
+		}
+		if updateResult.ModifiedCount == 0 {
+			statusCode = 400
+			return errors.New("user does not exist")
+		}
 
-// 		// Commit the transaction
-// 		err = session.CommitTransaction(sc)
-// 		if err != nil {
-// 			fmt.Println(err)
-// 			return err
-// 		}
+		fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
 
-// 		return nil
-// 	})
+		// Commit the transaction
+		err = session.CommitTransaction(sc)
+		if err != nil {
+			statusCode = 500
+			fmt.Println(err)
+			return err
+		}
 
-// 	if err != nil {
-// 		return models.User{}, err, 500
-// 	}
+		return nil
+	})
 
-// 	return NewUser, nil, statusCode
-// }
+	if err != nil {
+		return models.OmitedUser{}, err, 500
+	}
+
+	return NewUser, nil, statusCode
+}
 
 // delete user by id
-func (ts *UserService) DeleteUsersById(id primitive.ObjectID) (error, int) {
+func (ts *UserService) DeleteUsersById(id primitive.ObjectID, user models.OmitedUser) (error, int) {
+
 	filter := bson.D{{"_id", id}}
+	if user.Is_Admin == false && user.ID != id {
+		return errors.New("permision denied"), http.StatusForbidden
+	}
 
 	deleteResult, err := ts.collection.DeleteOne(context.TODO(), filter)
 	if err != nil {

@@ -45,8 +45,10 @@ func NewRouter() *gin.Engine {
 		if err != nil {
 			return nil
 		}
-		userRouter.GET("", userController.GetUsers)
+		userRouter.POST("", middleware.IsAdminMiddleware(), userController.CreateUser)
+		userRouter.GET("", middleware.IsAdminMiddleware(), userController.GetUsers)
 		userRouter.GET("/:id", userController.GetUser)
+		userRouter.PUT("/:id", userController.UpdateUser)
 		userRouter.DELETE("/:id", userController.DeleteUser)
 	}
 

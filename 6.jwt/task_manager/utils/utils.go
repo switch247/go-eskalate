@@ -41,3 +41,24 @@ func StringToObjectId(str string) (primitive.ObjectID, error) {
 	}
 	return objID, nil
 }
+
+func ExtractUser(c *gin.Context) (models.OmitedUser, error) {
+	userID, ok := c.Get("user_id")
+	if !ok {
+		return models.OmitedUser{}, errors.New("Failed to retrieve user ID")
+	}
+	UserobjectID, err := primitive.ObjectIDFromHex(userID.(string))
+	if err != nil {
+		return models.OmitedUser{}, errors.New("invalid user ID")
+	}
+	is_admin, ok := c.Get("is_admin")
+	if !ok {
+
+		return models.OmitedUser{}, errors.New("Failed to retrieve role")
+	}
+
+	return models.OmitedUser{
+		ID:       UserobjectID,
+		Is_Admin: is_admin.(bool),
+	}, nil
+}
