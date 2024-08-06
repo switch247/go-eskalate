@@ -125,7 +125,7 @@ func (ts *TaskService) CreateTasks(task *models.Task) (models.Task, error, int) 
 }
 
 // get all tasks
-func (ts *TaskService) GetTasks(userid primitive.ObjectID, isadmin bool) ([]*models.Task, error, int) {
+func (ts *TaskService) GetTasks(user models.OmitedUser) ([]*models.Task, error, int) {
 	// ts.mu.RLock()
 	// defer ts.mu.RUnlock()
 	// Create an index on the "_id" field
@@ -140,10 +140,10 @@ func (ts *TaskService) GetTasks(userid primitive.ObjectID, isadmin bool) ([]*mod
 	findOptions := options.Find()
 	// findOptions.SetLimit(2)
 	var filter bson.D
-	if isadmin == true {
+	if user.Is_Admin == true {
 		filter = bson.D{{}}
 	} else {
-		userId := primitive.ObjectID.Hex(userid)
+		userId := primitive.ObjectID.Hex(user.ID)
 
 		filter = bson.D{{"user_id", userId}}
 	}
@@ -188,7 +188,7 @@ func (ts *TaskService) GetTasks(userid primitive.ObjectID, isadmin bool) ([]*mod
 }
 
 // get task by id
-func (ts *TaskService) GetTasksById(id primitive.ObjectID, userid primitive.ObjectID, isadmin bool) (models.Task, error, int) {
+func (ts *TaskService) GetTasksById(id primitive.ObjectID, user models.OmitedUser) (models.Task, error, int) {
 	// Create an index on the "_id" field
 	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
 		Keys: bson.D{{"_id", 1}},
@@ -208,7 +208,7 @@ func (ts *TaskService) GetTasksById(id primitive.ObjectID, userid primitive.Obje
 	if err != nil {
 		return models.Task{}, errors.New("task does not exist"), 404
 	}
-	if isadmin == false && val != userid {
+	if user.Is_Admin == false && val != user.ID {
 		return models.Task{}, errors.New("permission denied"), http.StatusUnauthorized
 
 	}
@@ -217,7 +217,7 @@ func (ts *TaskService) GetTasksById(id primitive.ObjectID, userid primitive.Obje
 
 // update task by id
 // used transactions for this one
-func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task, userid primitive.ObjectID, isadmin bool) (models.Task, error, int) {
+func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task, user models.OmitedUser) (models.Task, error, int) {
 	// Start a session
 	session, err := ts.client.StartSession()
 	if err != nil {
@@ -239,10 +239,10 @@ func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task, 
 		}
 
 		// Retrieve the existing task
-		NewTask, err, statusCode = ts.GetTasksById(id, userid, isadmin)
+		NewTask, err, statusCode = ts.GetTasksById(id, user)
 		if err != nil {
 			_ = session.AbortTransaction(sc) // Roll back the transaction on error
-			return errors.New("task does not exist")
+			return err
 		}
 		val, err := primitive.ObjectIDFromHex(NewTask.User_ID)
 		if err != nil {
@@ -250,7 +250,7 @@ func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task, 
 			return errors.New("task does not exist")
 		}
 
-		if isadmin == false && userid != val {
+		if user.Is_Admin == false && user.ID != val {
 			_ = session.AbortTransaction(sc) // Roll back the transaction on error
 			statusCode = http.StatusUnauthorized
 			return errors.New("user does not have permission to update this task")
@@ -316,11 +316,11 @@ func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task models.Task, 
 }
 
 // delete task by id
-func (ts *TaskService) DeleteTasksById(id primitive.ObjectID, userid primitive.ObjectID, isadmin bool) (error, int) {
+func (ts *TaskService) DeleteTasksById(id primitive.ObjectID, user models.OmitedUser) (error, int) {
 	filter := bson.D{{"_id", id}}
 
 	// Retrieve the existing task
-	NewTask, err, statusCode := ts.GetTasksById(id, userid, isadmin)
+	NewTask, err, statusCode := ts.GetTasksById(id, user)
 	if err != nil {
 		return err, statusCode
 	}
@@ -330,7 +330,7 @@ func (ts *TaskService) DeleteTasksById(id primitive.ObjectID, userid primitive.O
 		return errors.New("task does not exist"), 404
 	}
 
-	if isadmin == false && userid != val {
+	if user.Is_Admin == false && user.ID != val {
 		return errors.New("user does not have permission to update this task"), 403
 	}
 
