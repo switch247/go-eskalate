@@ -191,7 +191,7 @@ func (ts *taskRepository) GetTasksById(ctx context.Context, id primitive.ObjectI
 
 	val, err := primitive.ObjectIDFromHex(result.User_ID)
 	if err != nil {
-		return Domain.Task{}, errors.New("task does not exist"), 404
+		return Domain.Task{}, errors.New("task id invalid"), 404
 	}
 	if user.Is_Admin == false && val != user.ID {
 		return Domain.Task{}, errors.New("permission denied"), http.StatusUnauthorized
@@ -232,7 +232,7 @@ func (ts *taskRepository) UpdateTasksById(ctx context.Context, id primitive.Obje
 		val, err := primitive.ObjectIDFromHex(NewTask.User_ID)
 		if err != nil {
 			_ = session.AbortTransaction(sc) // Roll back the transaction on error
-			return errors.New("task does not exist")
+			return errors.New("task id invalid")
 		}
 
 		if user.Is_Admin == false && user.ID != val {
@@ -312,7 +312,7 @@ func (ts *taskRepository) DeleteTasksById(ctx context.Context, id primitive.Obje
 
 	val, err := primitive.ObjectIDFromHex(NewTask.User_ID)
 	if err != nil {
-		return errors.New("task does not exist"), 404
+		return errors.New("task id invalid"), 404
 	}
 
 	if user.Is_Admin == false && user.ID != val {
