@@ -17,7 +17,7 @@ type userController struct {
 }
 
 func NewUserController() (*userController, error) {
-	service_reference, err := UseCases.NewUserController()
+	service_reference, err := UseCases.NewUserUseCase()
 	if err != nil {
 		return nil, err
 	}

@@ -15,11 +15,6 @@ import (
 	// "go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type AuthController interface {
-	Login(c *gin.Context)
-	Register(c *gin.Context)
-}
-
 type authController struct {
 	AuthUseCase Domain.AuthUseCase
 }

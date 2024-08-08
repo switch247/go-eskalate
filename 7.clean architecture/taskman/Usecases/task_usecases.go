@@ -16,7 +16,7 @@ type taskUseCase struct {
 	contextTimeout time.Duration
 }
 
-func NewTaskController() (*taskUseCase, error) {
+func NewTaskUseCase() (*taskUseCase, error) {
 	service_reference, err := Repositories.NewTaskRepository()
 	if err != nil {
 		return nil, err

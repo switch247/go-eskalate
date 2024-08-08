@@ -15,7 +15,7 @@ type userUseCases struct {
 	contextTimeout time.Duration
 }
 
-func NewUserController() (*userUseCases, error) {
+func NewUserUseCase() (*userUseCases, error) {
 	service_reference, err := Repositories.NewUserRepository()
 	if err != nil {
 		return nil, err
