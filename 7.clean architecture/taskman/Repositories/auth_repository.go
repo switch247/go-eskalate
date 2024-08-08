@@ -1,46 +1,37 @@
 package Repositories
 
 import (
-	// "strconv"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
-
-	// "os"
 	"time"
 
 	"main/Domain"
+	"main/Infrastructure"
 	"main/config"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/crypto/bcrypt"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/go-playground/validator"
 )
 
-type AuthService struct {
+type authRepository struct {
 	validator  *validator.Validate
 	client     *mongo.Client
 	DataBase   *mongo.Database
 	collection *mongo.Collection
 }
 
-type authService interface {
-	Login(user *Domain.User) ([]Domain.User, error)
-	Register(user *Domain.User) (Domain.User, error)
-}
-
-func NewAuthService() (*AuthService, error) {
+func NewAuthRepository() (*authRepository, error) {
 	client, err := config.GetClient()
 	DataBase := client.Database("test")
 	_collection := DataBase.Collection("users")
 	// _collection.Drop(context.TODO()) //uncomment this tho drop collection
 	if err == nil {
-		return &AuthService{
+		return &authRepository{
 			validator:  validator.New(),
 			client:     client,
 			DataBase:   DataBase,
@@ -51,19 +42,19 @@ func NewAuthService() (*AuthService, error) {
 	}
 }
 
-func (as *AuthService) Login(user *Domain.User) (string, error, int) {
+func (au *authRepository) Login(ctx context.Context, user *Domain.User) (string, error, int) {
 
 	// TODO: Implement user login logic
 	filter := bson.D{{"email", user.Email}}
 	var existingUser Domain.User
-	err := as.collection.FindOne(context.TODO(), filter).Decode(&existingUser)
+	err := au.collection.FindOne(ctx, filter).Decode(&existingUser)
 
-	if err != nil || bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(user.Password)) != nil {
+	if err != nil || !Infrastructure.CompareHashAndPasswordCustom(existingUser.Password, user.Password) {
 		return "", errors.New("Invalid credentials"), http.StatusNotFound
 	}
 
 	// Generate JWT
-	jwtToken, err := SignJwt(existingUser)
+	jwtToken, err := Infrastructure.SignJwt(existingUser)
 	if err != nil {
 		return "", err, 500
 	}
@@ -71,13 +62,13 @@ func (as *AuthService) Login(user *Domain.User) (string, error, int) {
 	return jwtToken, nil, 200
 }
 
-func (as *AuthService) Register(user *Domain.User) (Domain.OmitedUser, error, int) {
+func (au *authRepository) Register(ctx context.Context, user *Domain.User) (Domain.OmitedUser, error, int) {
 	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer cancel()
 	// Check if user email is taken
 	existingUserFilter := bson.D{{"email", user.Email}}
-	existingUserCount, err := as.collection.CountDocuments(context.TODO(), existingUserFilter)
+	existingUserCount, err := au.collection.CountDocuments(ctx, existingUserFilter)
 	if err != nil {
 		return Domain.OmitedUser{}, err, 500
 	}
@@ -85,18 +76,18 @@ func (as *AuthService) Register(user *Domain.User) (Domain.OmitedUser, error, in
 		return Domain.OmitedUser{}, errors.New("Email is already taken"), http.StatusBadRequest
 	}
 	// User registration logic
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	hashedPassword, err := Infrastructure.GenerateFromPasswordCustom(user.Password)
 	if err != nil {
 		return Domain.OmitedUser{}, err, 500
 	}
 	user.Password = string(hashedPassword)
-	insertResult, err := as.collection.InsertOne(context.TODO(), user)
+	insertResult, err := au.collection.InsertOne(ctx, user)
 	if err != nil {
 		return Domain.OmitedUser{}, err, 500
 	}
 	// Fetch the inserted task
 	var fetched Domain.OmitedUser
-	err = as.collection.FindOne(context.TODO(), bson.D{{"_id", insertResult.InsertedID.(primitive.ObjectID)}}).Decode(&fetched)
+	err = au.collection.FindOne(context.TODO(), bson.D{{"_id", insertResult.InsertedID.(primitive.ObjectID)}}).Decode(&fetched)
 	if err != nil {
 		fmt.Println(err)
 		return Domain.OmitedUser{}, errors.New("User Not Created"), 500
@@ -106,22 +97,4 @@ func (as *AuthService) Register(user *Domain.User) (Domain.OmitedUser, error, in
 	}
 	fetched.Password = ""
 	return fetched, nil, 200
-}
-
-func SignJwt(existingUser Domain.User) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":  existingUser.ID,
-		"email":    existingUser.Email,
-		"is_admin": existingUser.Is_Admin,
-		"exp":      time.Now().Add(time.Minute * 10).Unix(),
-		// for the purpose of this task, we will set the expiration time to 1 minute
-	})
-
-	jwtToken, err := token.SignedString(config.JwtSecret)
-	return jwtToken, err
-}
-
-func CompareHashAndPassword(hashedPassword string, plainPassword string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
-	return err == nil
 }

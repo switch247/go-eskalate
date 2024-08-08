@@ -3,7 +3,7 @@ package controllers
 import (
 	"fmt"
 	"main/Domain"
-	"main/Repositories"
+	"main/UseCases"
 	"main/utils"
 	"net/http"
 
@@ -12,30 +12,23 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type UserController interface {
-	GetUsers(c *gin.Context)
-	GetUser(c *gin.Context)
-	CreateUser(c *gin.Context)
-	UpdateUser(c *gin.Context)
-	DeleteUser(c *gin.Context)
-}
-
 type userController struct {
-	userService Repositories.UserService
+	userUseCase Domain.UserUseCases
 }
 
 func NewUserController() (*userController, error) {
-	service_reference, err := Repositories.NewUserService()
+	service_reference, err := UseCases.NewUserController()
 	if err != nil {
 		return nil, err
 	}
 	return &userController{
-		userService: *service_reference,
+		userUseCase: service_reference,
 	}, nil
 }
+
 func (uc *userController) GetUsers(c *gin.Context) {
 
-	users, err, statusCode := uc.userService.GetUsers()
+	users, err, statusCode := uc.userUseCase.GetUsers(c)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -55,7 +48,7 @@ func (uc *userController) GetUser(c *gin.Context) {
 		c.IndentedJSON(400, gin.H{"error": "Invalid ID"})
 		return
 	}
-	user, err, statusCode := uc.userService.GetUsersById(objectID, user)
+	user, err, statusCode := uc.userUseCase.GetUsersById(c, objectID, user)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -76,7 +69,7 @@ func (uc *userController) CreateUser(c *gin.Context) {
 		return
 	}
 
-	OmitedUser, err, statusCode := uc.userService.CreateUsers(&user)
+	OmitedUser, err, statusCode := uc.userUseCase.CreateUsers(c, &user)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -101,7 +94,7 @@ func (uc *userController) UpdateUser(c *gin.Context) {
 		c.IndentedJSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	OmitedUser, err, statusCode := uc.userService.UpdateUsersById(objectID, user, logeduser)
+	OmitedUser, err, statusCode := uc.userUseCase.UpdateUsersById(c, objectID, user, logeduser)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -122,7 +115,7 @@ func (uc *userController) DeleteUser(c *gin.Context) {
 		c.IndentedJSON(400, gin.H{"error": "Invalid ID"})
 		return
 	}
-	err, statusCode := uc.userService.DeleteUsersById(objectID, user)
+	err, statusCode := uc.userUseCase.DeleteUsersById(c, objectID, user)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {

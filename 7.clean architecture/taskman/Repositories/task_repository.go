@@ -23,26 +23,14 @@ import (
 	"github.com/go-playground/validator"
 )
 
-type taskService interface {
-	GetTasks() ([]Domain.Task, error)
-	CreateTasks(task *Domain.Task) (Domain.Task, error)
-	GetTasksById(id string) (Domain.Task, error)
-	UpdateTasksById(id string, task Domain.Task) (Domain.Task, error)
-	DeleteTasksById(id string) error
-}
-
-type TaskService struct {
+type taskRepository struct {
 	validator  *validator.Validate
 	client     *mongo.Client
 	DataBase   *mongo.Database
 	collection *mongo.Collection
 }
 
-func NewTaskService() (*TaskService, error) {
-
-	// Set client options
-	// Connect to MongoDB
-	// Check the connection
+func NewTaskRepository() (*taskRepository, error) {
 	var collection *mongo.Collection
 	var DataBase *mongo.Database
 	client, err := config.GetClient()
@@ -50,7 +38,7 @@ func NewTaskService() (*TaskService, error) {
 		DataBase = client.Database("test")
 		collection = DataBase.Collection("tasks")
 		// collection.Drop(context.TODO()) //uncomment this tho drop collection
-		ts := &TaskService{
+		ts := &taskRepository{
 			client:     client,
 			validator:  validator.New(),
 			DataBase:   DataBase,
@@ -64,7 +52,7 @@ func NewTaskService() (*TaskService, error) {
 }
 
 // create task
-func (ts *TaskService) CreateTasks(task *Domain.Task) (Domain.Task, error, int) {
+func (ts *taskRepository) CreateTasks(task *Domain.Task) (Domain.Task, error, int) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -125,7 +113,7 @@ func (ts *TaskService) CreateTasks(task *Domain.Task) (Domain.Task, error, int) 
 }
 
 // get all tasks
-func (ts *TaskService) GetTasks(user Domain.OmitedUser) ([]*Domain.Task, error, int) {
+func (ts *taskRepository) GetTasks(user Domain.OmitedUser) ([]*Domain.Task, error, int) {
 	// ts.mu.RLock()
 	// defer ts.mu.RUnlock()
 	// Create an index on the "_id" field
@@ -188,7 +176,7 @@ func (ts *TaskService) GetTasks(user Domain.OmitedUser) ([]*Domain.Task, error, 
 }
 
 // get task by id
-func (ts *TaskService) GetTasksById(id primitive.ObjectID, user Domain.OmitedUser) (Domain.Task, error, int) {
+func (ts *taskRepository) GetTasksById(id primitive.ObjectID, user Domain.OmitedUser) (Domain.Task, error, int) {
 	// Create an index on the "_id" field
 	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
 		Keys: bson.D{{"_id", 1}},
@@ -217,7 +205,7 @@ func (ts *TaskService) GetTasksById(id primitive.ObjectID, user Domain.OmitedUse
 
 // update task by id
 // used transactions for this one
-func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task Domain.Task, user Domain.OmitedUser) (Domain.Task, error, int) {
+func (ts *taskRepository) UpdateTasksById(id primitive.ObjectID, task Domain.Task, user Domain.OmitedUser) (Domain.Task, error, int) {
 	// Start a session
 	session, err := ts.client.StartSession()
 	if err != nil {
@@ -316,7 +304,7 @@ func (ts *TaskService) UpdateTasksById(id primitive.ObjectID, task Domain.Task, 
 }
 
 // delete task by id
-func (ts *TaskService) DeleteTasksById(id primitive.ObjectID, user Domain.OmitedUser) (error, int) {
+func (ts *taskRepository) DeleteTasksById(id primitive.ObjectID, user Domain.OmitedUser) (error, int) {
 	filter := bson.D{{"_id", id}}
 
 	// Retrieve the existing task

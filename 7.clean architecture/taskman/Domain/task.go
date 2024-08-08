@@ -24,3 +24,19 @@ type Task struct {
 }
 
 // oneof='Pending' 'Completed' 'In Progress'
+
+type TaskRepository interface {
+	GetTasks(user OmitedUser) ([]*Task, error, int)
+	CreateTasks(task *Task) (Task, error, int)
+	GetTasksById(id primitive.ObjectID, user OmitedUser) (Task, error, int)
+	UpdateTasksById(id primitive.ObjectID, task Task, user OmitedUser) (Task, error, int)
+	DeleteTasksById(id primitive.ObjectID, user OmitedUser) (error, int)
+}
+
+type TaskUsecase interface {
+	GetTasks(user OmitedUser) ([]*Task, error, int)
+	CreateTasks(task *Task) (Task, error, int)
+	GetTasksById(id primitive.ObjectID, user OmitedUser) (Task, error, int)
+	UpdateTasksById(id primitive.ObjectID, task Task, user OmitedUser) (Task, error, int)
+	DeleteTasksById(id primitive.ObjectID, user OmitedUser) (error, int)
+}

@@ -25,28 +25,19 @@ import (
 	"github.com/go-playground/validator"
 )
 
-type UserService struct {
+type userRepository struct {
 	validator  *validator.Validate
 	client     *mongo.Client
 	DataBase   *mongo.Database
 	collection *mongo.Collection
 }
 
-type userService interface {
-	GetUsersByEmail(email string) (Domain.User, error, int)
-	GetUsers() ([]Domain.User, error)
-	CreateUsers(user *Domain.User) (Domain.User, error)
-	GetUsersById(id string) (Domain.User, error)
-	UpdateUsersById(id string, user Domain.User) (Domain.User, error)
-	DeleteUsersById(id string) error
-}
-
-func NewUserService() (*UserService, error) {
+func NewUserRepository() (*userRepository, error) {
 	client, err := config.GetClient()
 	DataBase := client.Database("test")
 	_collection := DataBase.Collection("users")
 	if err == nil {
-		return &UserService{
+		return &userRepository{
 			validator:  validator.New(),
 			client:     client,
 			DataBase:   DataBase,
@@ -59,7 +50,7 @@ func NewUserService() (*UserService, error) {
 }
 
 // create user
-func (as *UserService) CreateUsers(user *Domain.User) (Domain.OmitedUser, error, int) {
+func (as *userRepository) CreateUsers(ctx context.Context, user *Domain.User) (Domain.OmitedUser, error, int) {
 	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer cancel()
@@ -97,7 +88,7 @@ func (as *UserService) CreateUsers(user *Domain.User) (Domain.OmitedUser, error,
 }
 
 // get all users
-func (ts *UserService) GetUsers() ([]*Domain.OmitedUser, error, int) {
+func (ts *userRepository) GetUsers(ctx context.Context) ([]*Domain.OmitedUser, error, int) {
 	// ts.mu.RLock()
 	// defer ts.mu.RUnlock()
 	// Create an index on the "_id" field
@@ -153,7 +144,7 @@ func (ts *UserService) GetUsers() ([]*Domain.OmitedUser, error, int) {
 }
 
 // get user by id
-func (ts *UserService) GetUsersById(id primitive.ObjectID, user Domain.OmitedUser) (Domain.OmitedUser, error, int) {
+func (ts *userRepository) GetUsersById(ctx context.Context, id primitive.ObjectID, user Domain.OmitedUser) (Domain.OmitedUser, error, int) {
 	// Create an index on the "_id" field
 	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
 		Keys: bson.D{{"_id", 1}},
@@ -182,29 +173,10 @@ func (ts *UserService) GetUsersById(id primitive.ObjectID, user Domain.OmitedUse
 	return result, nil, 200
 }
 
-// get user by id
-func (ts *UserService) GetUsersByEmail(email string) (Domain.OmitedUser, error, int) {
-	// Create an index on the "_id" field
-	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
-		Keys: bson.D{{"email", 1}},
-	})
-	if err1 != nil {
-		return Domain.OmitedUser{}, err1, 500
-	}
-
-	filter := bson.D{{"email", email}}
-	var result Domain.OmitedUser
-	err := ts.collection.FindOne(context.TODO(), filter).Decode(&result)
-	if err != nil {
-		return Domain.OmitedUser{}, errors.New("User not found"), http.StatusNotFound
-	}
-	return result, nil, 200
-}
-
 // update user by id
 // used transactions for this one
 
-func (ts *UserService) UpdateUsersById(id primitive.ObjectID, user Domain.User, curentuser Domain.OmitedUser) (Domain.OmitedUser, error, int) {
+func (ts *userRepository) UpdateUsersById(ctx context.Context, id primitive.ObjectID, user Domain.User, curentuser Domain.OmitedUser) (Domain.OmitedUser, error, int) {
 	// Start a session
 	session, err := ts.client.StartSession()
 	if err != nil {
@@ -226,7 +198,7 @@ func (ts *UserService) UpdateUsersById(id primitive.ObjectID, user Domain.User, 
 		}
 
 		// Retrieve the existing user
-		NewUser, err, statusCode = ts.GetUsersById(id, curentuser)
+		NewUser, err, statusCode = ts.GetUsersById(ctx, id, curentuser)
 		if err != nil {
 			_ = session.AbortTransaction(sc) // Roll back the transaction on error
 			return err
@@ -277,7 +249,7 @@ func (ts *UserService) UpdateUsersById(id primitive.ObjectID, user Domain.User, 
 }
 
 // delete user by id
-func (ts *UserService) DeleteUsersById(id primitive.ObjectID, user Domain.OmitedUser) (error, int) {
+func (ts *userRepository) DeleteUsersById(ctx context.Context, id primitive.ObjectID, user Domain.OmitedUser) (error, int) {
 
 	filter := bson.D{{"_id", id}}
 	if user.Is_Admin == false && user.ID != id {
@@ -296,3 +268,22 @@ func (ts *UserService) DeleteUsersById(id primitive.ObjectID, user Domain.Omited
 	return nil, 200
 
 }
+
+// get user by email
+// func (ts *userRepository) GetUsersByEmail(email string) (Domain.OmitedUser, error, int) {
+// 	// Create an index on the "_id" field
+// 	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+// 		Keys: bson.D{{"email", 1}},
+// 	})
+// 	if err1 != nil {
+// 		return Domain.OmitedUser{}, err1, 500
+// 	}
+
+// 	filter := bson.D{{"email", email}}
+// 	var result Domain.OmitedUser
+// 	err := ts.collection.FindOne(context.TODO(), filter).Decode(&result)
+// 	if err != nil {
+// 		return Domain.OmitedUser{}, errors.New("User not found"), http.StatusNotFound
+// 	}
+// 	return result, nil, 200
+// }

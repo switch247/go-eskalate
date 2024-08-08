@@ -4,8 +4,10 @@ import (
 	"fmt"
 
 	"main/Domain"
+	UseCases "main/Usecases"
+
 	// "main/utils"
-	"main/Repositories"
+
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -19,16 +21,16 @@ type AuthController interface {
 }
 
 type authController struct {
-	authService Repositories.AuthService
+	AuthUseCase Domain.AuthUseCase
 }
 
 func NewAuthController() (*authController, error) {
-	service_reference, err := Repositories.NewAuthService()
+	service_reference, err := UseCases.NewAuthUseCase()
 	if err != nil {
 		return nil, err
 	}
 	return &authController{
-		authService: *service_reference,
+		AuthUseCase: service_reference,
 	}, nil
 }
 
@@ -44,7 +46,7 @@ func (ac *authController) Login(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid or missing data", "error": err.Error()})
 		return
 	}
-	token, err, statusCode := ac.authService.Login(&newUser)
+	token, err, statusCode := ac.AuthUseCase.Login(c, &newUser)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -65,7 +67,7 @@ func (ac *authController) Register(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid or missing data", "error": err.Error()})
 		return
 	}
-	createdUser, err, statusCode := ac.authService.Register(&newUser)
+	createdUser, err, statusCode := ac.AuthUseCase.Register(c, &newUser)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {

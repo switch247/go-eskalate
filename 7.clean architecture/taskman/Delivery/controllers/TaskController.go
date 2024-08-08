@@ -23,16 +23,16 @@ type TaskController interface {
 }
 
 type taskController struct {
-	taskService Repositories.TaskService
+	TaskRepository Domain.TaskRepository
 }
 
 func NewTaskController() (*taskController, error) {
-	service_reference, err := Repositories.NewTaskService()
+	service_reference, err := Repositories.NewTaskRepository()
 	if err != nil {
 		return nil, err
 	}
 	return &taskController{
-		taskService: *service_reference,
+		TaskRepository: service_reference,
 	}, nil
 }
 
@@ -47,7 +47,7 @@ func (tc *taskController) GetAllTasks(c *gin.Context) {
 	// var newTak Domain.Task
 	// v := validator.New()
 	// fmt.Print(v, newTak)
-	tasks, err, statusCode := tc.taskService.GetTasks(logedUser)
+	tasks, err, statusCode := tc.TaskRepository.GetTasks(logedUser)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 		return
@@ -86,7 +86,7 @@ func (tc *taskController) CreateTasks(c *gin.Context) {
 	newTak.User_ID = userID.(string)
 
 	//
-	task, err, statusCode := tc.taskService.CreateTasks(&newTak)
+	task, err, statusCode := tc.TaskRepository.CreateTasks(&newTak)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -108,7 +108,7 @@ func (tc *taskController) GetTasksById(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	task, err, statusCode := tc.taskService.GetTasksById(objectID, logedUser)
+	task, err, statusCode := tc.TaskRepository.GetTasksById(objectID, logedUser)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -143,7 +143,7 @@ func (tc *taskController) UpdateTasksById(c *gin.Context) {
 		return
 	}
 
-	data, er, status := tc.taskService.UpdateTasksById(objectID, updatedTask, logedUser)
+	data, er, status := tc.TaskRepository.UpdateTasksById(objectID, updatedTask, logedUser)
 	if er != nil {
 		c.IndentedJSON(status, gin.H{"error": er.Error()})
 		return
@@ -166,7 +166,7 @@ func (tc *taskController) DeleteTasksById(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	err, statusCode := tc.taskService.DeleteTasksById(objectID, logedUser)
+	err, statusCode := tc.TaskRepository.DeleteTasksById(objectID, logedUser)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
