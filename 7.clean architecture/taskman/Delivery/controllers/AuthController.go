@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"main/Domain"
-	UseCases "main/Usecases"
+	"main/UseCases"
 
 	// "main/utils"
 

@@ -1,175 +1,68 @@
 package UseCases
 
 import (
-	"fmt"
-
+	"context"
 	"main/Repositories"
+	"time"
 
 	"main/Domain"
-	"main/utils"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type TaskController interface {
-	GetAllTasks(c *gin.Context)
-	CreateTasks(c *gin.Context)
-	GetTasksById(c *gin.Context)
-	UpdateTasksById(c *gin.Context)
-	DeleteTasksById(c *gin.Context)
-}
-
-type taskController struct {
+type taskUseCase struct {
 	TaskRepository Domain.TaskRepository
+	contextTimeout time.Duration
 }
 
-func NewTaskController() (*taskController, error) {
+func NewTaskController() (*taskUseCase, error) {
 	service_reference, err := Repositories.NewTaskRepository()
 	if err != nil {
 		return nil, err
 	}
-	return &taskController{
+	return &taskUseCase{
 		TaskRepository: service_reference,
+		contextTimeout: time.Second * 10,
 	}, nil
 }
 
-func (tc *taskController) GetAllTasks(c *gin.Context) {
-	// Get the user ID from the context
-	logedUser, err := utils.ExtractUser(c)
-	if err != nil {
-		c.IndentedJSON(400, gin.H{"error": err.Error()})
-		return
-	}
+func (tu *taskUseCase) GetAllTasks(c *gin.Context, loggedUser Domain.OmitedUser) ([]*Domain.Task, error, int) {
+	ctx, cancel := context.WithTimeout(c, tu.contextTimeout)
+	defer cancel()
 
-	// var newTak Domain.Task
-	// v := validator.New()
-	// fmt.Print(v, newTak)
-	tasks, err, statusCode := tc.TaskRepository.GetTasks(logedUser)
-	if err != nil {
-		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
-		return
-	}
-	c.IndentedJSON(http.StatusOK, tasks)
+	return tu.TaskRepository.GetTasks(ctx, loggedUser)
 
 }
 
-func (tc *taskController) CreateTasks(c *gin.Context) {
-	// Retrieve the user information from the context
-	// Get the user ID from the context
-	userID, ok := c.Get("user_id")
-	if !ok {
-		c.JSON(500, gin.H{"error": "Failed to retrieve user ID"})
-		c.Abort()
-		return
-	}
-	fmt.Printf("User: %v:", userID)
-	var newTak Domain.Task
-	v := validator.New()
-	if err := c.ShouldBindJSON(&newTak); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid data", "error": err.Error()})
-		return
-	}
-	if err := v.Struct(newTak); err != nil {
-		fmt.Printf(err.Error())
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid or missing data", "error": err.Error()})
-		return
-	}
-	err := utils.ValidateStatus(&newTak)
-	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid or missing data, allowed options are Pending, In Progress, and Completed", "error": err.Error()})
-		return
-	}
+func (tu *taskUseCase) CreateTasks(c *gin.Context, task *Domain.Task) (Domain.Task, error, int) {
+	ctx, cancel := context.WithTimeout(c, tu.contextTimeout)
+	defer cancel()
 
-	newTak.User_ID = userID.(string)
-
-	//
-	task, err, statusCode := tc.TaskRepository.CreateTasks(&newTak)
-	if err != nil {
-		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
-	} else {
-		c.IndentedJSON(http.StatusCreated, task)
-	}
-}
-
-func (tc *taskController) GetTasksById(c *gin.Context) {
-
-	logedUser, err := utils.ExtractUser(c)
-	if err != nil {
-		c.IndentedJSON(400, gin.H{"error": err.Error()})
-		return
-	}
-	id := c.Param("id")
-
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	task, err, statusCode := tc.TaskRepository.GetTasksById(objectID, logedUser)
-	if err != nil {
-		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
-	} else {
-		c.IndentedJSON(200, task)
-	}
-}
-
-func (tc *taskController) UpdateTasksById(c *gin.Context) {
-	logedUser, err := utils.ExtractUser(c)
-	if err != nil {
-		c.IndentedJSON(400, gin.H{"error": err.Error()})
-		return
-	}
-
-	id := c.Param("id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	var updatedTask Domain.Task
-
-	if err := c.ShouldBindJSON(&updatedTask); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	//validate status first
-	er := utils.ValidateStatus(&updatedTask)
-	if er != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid or missing data, allowed options are Pending, In Progress, and Completed", "error": err.Error()})
-		return
-	}
-
-	data, er, status := tc.TaskRepository.UpdateTasksById(objectID, updatedTask, logedUser)
-	if er != nil {
-		c.IndentedJSON(status, gin.H{"error": er.Error()})
-		return
-	} else {
-		c.IndentedJSON(http.StatusOK, gin.H{"message": "Task updated", "data": data})
-	}
+	return tu.TaskRepository.CreateTasks(ctx, task)
 
 }
 
-func (tc *taskController) DeleteTasksById(c *gin.Context) {
-	logedUser, err := utils.ExtractUser(c)
-	if err != nil {
-		c.IndentedJSON(400, gin.H{"error": err.Error()})
-		return
-	}
+func (tu *taskUseCase) GetTasksById(c *gin.Context, id primitive.ObjectID, loggedUser Domain.OmitedUser) (Domain.Task, error, int) {
+	ctx, cancel := context.WithTimeout(c, tu.contextTimeout)
+	defer cancel()
 
-	id := c.Param("id")
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	err, statusCode := tc.TaskRepository.DeleteTasksById(objectID, logedUser)
-	if err != nil {
-		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
-	} else {
-		c.IndentedJSON(http.StatusOK, gin.H{"success": "Data Deleted"})
-	}
+	return tu.TaskRepository.GetTasksById(ctx, id, loggedUser)
+
+}
+
+func (tu *taskUseCase) UpdateTasksById(c *gin.Context, id primitive.ObjectID, task Domain.Task, loggedUser Domain.OmitedUser) (Domain.Task, error, int) {
+	ctx, cancel := context.WithTimeout(c, tu.contextTimeout)
+	defer cancel()
+
+	return tu.TaskRepository.UpdateTasksById(ctx, id, task, loggedUser)
+
+}
+
+func (tu *taskUseCase) DeleteTasksById(c *gin.Context, id primitive.ObjectID, user Domain.OmitedUser) (error, int) {
+	ctx, cancel := context.WithTimeout(c, tu.contextTimeout)
+	defer cancel()
+
+	return tu.TaskRepository.DeleteTasksById(ctx, id, user)
+
 }

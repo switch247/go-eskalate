@@ -10,7 +10,6 @@ import (
 	"net/http"
 
 	// "os"
-	"time"
 
 	"main/Domain"
 	"main/config"
@@ -52,9 +51,7 @@ func NewTaskRepository() (*taskRepository, error) {
 }
 
 // create task
-func (ts *taskRepository) CreateTasks(task *Domain.Task) (Domain.Task, error, int) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+func (ts *taskRepository) CreateTasks(ctx context.Context, task *Domain.Task) (Domain.Task, error, int) {
 
 	session, err := ts.client.StartSession()
 	if err != nil {
@@ -113,7 +110,7 @@ func (ts *taskRepository) CreateTasks(task *Domain.Task) (Domain.Task, error, in
 }
 
 // get all tasks
-func (ts *taskRepository) GetTasks(user Domain.OmitedUser) ([]*Domain.Task, error, int) {
+func (ts *taskRepository) GetTasks(ctx context.Context, user Domain.OmitedUser) ([]*Domain.Task, error, int) {
 	// ts.mu.RLock()
 	// defer ts.mu.RUnlock()
 	// Create an index on the "_id" field
@@ -140,7 +137,7 @@ func (ts *taskRepository) GetTasks(user Domain.OmitedUser) ([]*Domain.Task, erro
 	var results []*Domain.Task
 
 	// Passing bson.D{{}} as the filter matches all documents in the collection
-	cur, err := ts.collection.Find(context.TODO(), filter, findOptions)
+	cur, err := ts.collection.Find(ctx, filter, findOptions)
 	if err != nil {
 		log.Fatal(err)
 		return []*Domain.Task{}, err, 0
@@ -176,9 +173,9 @@ func (ts *taskRepository) GetTasks(user Domain.OmitedUser) ([]*Domain.Task, erro
 }
 
 // get task by id
-func (ts *taskRepository) GetTasksById(id primitive.ObjectID, user Domain.OmitedUser) (Domain.Task, error, int) {
+func (ts *taskRepository) GetTasksById(ctx context.Context, id primitive.ObjectID, user Domain.OmitedUser) (Domain.Task, error, int) {
 	// Create an index on the "_id" field
-	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+	_, err1 := ts.collection.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{{"_id", 1}},
 	})
 	if err1 != nil {
@@ -187,7 +184,7 @@ func (ts *taskRepository) GetTasksById(id primitive.ObjectID, user Domain.Omited
 
 	filter := bson.D{{"_id", id}}
 	var result Domain.Task
-	err := ts.collection.FindOne(context.TODO(), filter).Decode(&result)
+	err := ts.collection.FindOne(ctx, filter).Decode(&result)
 	if err != nil {
 		return Domain.Task{}, errors.New("Task not found"), http.StatusNotFound
 	}
@@ -205,14 +202,14 @@ func (ts *taskRepository) GetTasksById(id primitive.ObjectID, user Domain.Omited
 
 // update task by id
 // used transactions for this one
-func (ts *taskRepository) UpdateTasksById(id primitive.ObjectID, task Domain.Task, user Domain.OmitedUser) (Domain.Task, error, int) {
+func (ts *taskRepository) UpdateTasksById(ctx context.Context, id primitive.ObjectID, task Domain.Task, user Domain.OmitedUser) (Domain.Task, error, int) {
 	// Start a session
 	session, err := ts.client.StartSession()
 	if err != nil {
 		fmt.Println(err)
 		return Domain.Task{}, err, 500
 	}
-	defer session.EndSession(context.Background())
+	defer session.EndSession(ctx)
 
 	var NewTask Domain.Task
 	statusCode := 200
@@ -227,7 +224,7 @@ func (ts *taskRepository) UpdateTasksById(id primitive.ObjectID, task Domain.Tas
 		}
 
 		// Retrieve the existing task
-		NewTask, err, statusCode = ts.GetTasksById(id, user)
+		NewTask, err, statusCode = ts.GetTasksById(ctx, id, user)
 		if err != nil {
 			_ = session.AbortTransaction(sc) // Roll back the transaction on error
 			return err
@@ -304,11 +301,11 @@ func (ts *taskRepository) UpdateTasksById(id primitive.ObjectID, task Domain.Tas
 }
 
 // delete task by id
-func (ts *taskRepository) DeleteTasksById(id primitive.ObjectID, user Domain.OmitedUser) (error, int) {
+func (ts *taskRepository) DeleteTasksById(ctx context.Context, id primitive.ObjectID, user Domain.OmitedUser) (error, int) {
 	filter := bson.D{{"_id", id}}
 
 	// Retrieve the existing task
-	NewTask, err, statusCode := ts.GetTasksById(id, user)
+	NewTask, err, statusCode := ts.GetTasksById(ctx, id, user)
 	if err != nil {
 		return err, statusCode
 	}
@@ -322,7 +319,7 @@ func (ts *taskRepository) DeleteTasksById(id primitive.ObjectID, user Domain.Omi
 		return errors.New("user does not have permission to update this task"), 403
 	}
 
-	deleteResult, err := ts.collection.DeleteOne(context.TODO(), filter)
+	deleteResult, err := ts.collection.DeleteOne(ctx, filter)
 	if err != nil {
 		fmt.Println(err)
 		return err, 500

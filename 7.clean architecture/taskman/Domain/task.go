@@ -1,8 +1,10 @@
 package Domain
 
 import (
+	"context"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -26,17 +28,17 @@ type Task struct {
 // oneof='Pending' 'Completed' 'In Progress'
 
 type TaskRepository interface {
-	GetTasks(user OmitedUser) ([]*Task, error, int)
-	CreateTasks(task *Task) (Task, error, int)
-	GetTasksById(id primitive.ObjectID, user OmitedUser) (Task, error, int)
-	UpdateTasksById(id primitive.ObjectID, task Task, user OmitedUser) (Task, error, int)
-	DeleteTasksById(id primitive.ObjectID, user OmitedUser) (error, int)
+	CreateTasks(ctx context.Context, task *Task) (Task, error, int)
+	GetTasks(ctx context.Context, user OmitedUser) ([]*Task, error, int)
+	GetTasksById(ctx context.Context, id primitive.ObjectID, user OmitedUser) (Task, error, int)
+	UpdateTasksById(ctx context.Context, id primitive.ObjectID, task Task, user OmitedUser) (Task, error, int)
+	DeleteTasksById(ctx context.Context, id primitive.ObjectID, user OmitedUser) (error, int)
 }
 
-type TaskUsecase interface {
-	GetTasks(user OmitedUser) ([]*Task, error, int)
-	CreateTasks(task *Task) (Task, error, int)
-	GetTasksById(id primitive.ObjectID, user OmitedUser) (Task, error, int)
-	UpdateTasksById(id primitive.ObjectID, task Task, user OmitedUser) (Task, error, int)
-	DeleteTasksById(id primitive.ObjectID, user OmitedUser) (error, int)
+type TaskUseCase interface {
+	GetAllTasks(c *gin.Context, loggedUser OmitedUser) ([]*Task, error, int)
+	CreateTasks(c *gin.Context, task *Task) (Task, error, int)
+	GetTasksById(c *gin.Context, id primitive.ObjectID, loggedUser OmitedUser) (Task, error, int)
+	UpdateTasksById(c *gin.Context, id primitive.ObjectID, task Task, loggedUser OmitedUser) (Task, error, int)
+	DeleteTasksById(c *gin.Context, id primitive.ObjectID, user OmitedUser) (error, int)
 }

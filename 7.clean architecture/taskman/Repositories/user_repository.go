@@ -10,9 +10,9 @@ import (
 	"net/http"
 
 	// "os"
-	"time"
 
 	"main/Domain"
+	"main/Infrastructure"
 	"main/config"
 	"main/utils"
 
@@ -20,7 +20,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/go-playground/validator"
 )
@@ -51,12 +50,10 @@ func NewUserRepository() (*userRepository, error) {
 
 // create user
 func (as *userRepository) CreateUsers(ctx context.Context, user *Domain.User) (Domain.OmitedUser, error, int) {
-	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
-	defer cancel()
 	// Check if user email is taken
 	existingUserFilter := bson.D{{"email", user.Email}}
-	existingUserCount, err := as.collection.CountDocuments(context.TODO(), existingUserFilter)
+	existingUserCount, err := as.collection.CountDocuments(ctx, existingUserFilter)
 	if err != nil {
 		return Domain.OmitedUser{}, err, 500
 	}
@@ -64,12 +61,12 @@ func (as *userRepository) CreateUsers(ctx context.Context, user *Domain.User) (D
 		return Domain.OmitedUser{}, errors.New("Email is already taken"), http.StatusBadRequest
 	}
 	// User registration logic
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	hashedPassword, err := Infrastructure.GenerateFromPasswordCustom(user.Password)
 	if err != nil {
 		return Domain.OmitedUser{}, err, 500
 	}
 	user.Password = string(hashedPassword)
-	insertResult, err := as.collection.InsertOne(context.TODO(), user)
+	insertResult, err := as.collection.InsertOne(ctx, user)
 	if err != nil {
 		return Domain.OmitedUser{}, err, 500
 	}
@@ -92,7 +89,7 @@ func (ts *userRepository) GetUsers(ctx context.Context) ([]*Domain.OmitedUser, e
 	// ts.mu.RLock()
 	// defer ts.mu.RUnlock()
 	// Create an index on the "_id" field
-	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+	_, err1 := ts.collection.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{{"_id", 1}},
 	})
 	if err1 != nil {
@@ -108,7 +105,7 @@ func (ts *userRepository) GetUsers(ctx context.Context) ([]*Domain.OmitedUser, e
 	var results []*Domain.OmitedUser
 
 	// Passing bson.D{{}} as the filter matches all documents in the collection
-	cur, err := ts.collection.Find(context.TODO(), filter, findOptions)
+	cur, err := ts.collection.Find(ctx, filter, findOptions)
 	if err != nil {
 		log.Fatal(err)
 		return []*Domain.OmitedUser{}, err, 0
@@ -116,7 +113,7 @@ func (ts *userRepository) GetUsers(ctx context.Context) ([]*Domain.OmitedUser, e
 
 	// Finding multiple documents returns a cursor
 	// Iterating through the cursor allows us to decode documents one at a time
-	for cur.Next(context.TODO()) {
+	for cur.Next(ctx) {
 
 		// create a value into which the single document can be decoded
 		var elem Domain.OmitedUser
@@ -137,7 +134,7 @@ func (ts *userRepository) GetUsers(ctx context.Context) ([]*Domain.OmitedUser, e
 	}
 
 	// Close the cursor once finished
-	cur.Close(context.TODO())
+	cur.Close(ctx)
 
 	fmt.Printf("Found multiple documents (array of pointers): %+v\n", results)
 	return results, nil, 200
@@ -146,7 +143,7 @@ func (ts *userRepository) GetUsers(ctx context.Context) ([]*Domain.OmitedUser, e
 // get user by id
 func (ts *userRepository) GetUsersById(ctx context.Context, id primitive.ObjectID, user Domain.OmitedUser) (Domain.OmitedUser, error, int) {
 	// Create an index on the "_id" field
-	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+	_, err1 := ts.collection.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{{"_id", 1}},
 	})
 	if err1 != nil {
@@ -154,15 +151,16 @@ func (ts *userRepository) GetUsersById(ctx context.Context, id primitive.ObjectI
 	}
 	var filter bson.D
 	if user.Is_Admin == false {
+		fmt.Println("user is not admin")
 		userIdString := utils.ObjectIdToString(user.ID)
 		filter = bson.D{{"_id", id}, {"user_id", userIdString}}
 
 	} else {
-
 		filter = bson.D{{"_id", id}}
 	}
 	var result Domain.OmitedUser
-	err := ts.collection.FindOne(context.TODO(), filter).Decode(&result)
+	err := ts.collection.FindOne(ctx, filter).Decode(&result)
+	// # handel this later
 	if err != nil {
 		return Domain.OmitedUser{}, errors.New("User not found"), http.StatusNotFound
 	}
@@ -183,13 +181,13 @@ func (ts *userRepository) UpdateUsersById(ctx context.Context, id primitive.Obje
 		fmt.Println(err)
 		return Domain.OmitedUser{}, err, 500
 	}
-	defer session.EndSession(context.Background())
+	defer session.EndSession(ctx)
 
 	var NewUser Domain.OmitedUser
 	statusCode := 200
 
 	// Execute the transaction
-	err = mongo.WithSession(context.Background(), session, func(sc mongo.SessionContext) error {
+	err = mongo.WithSession(ctx, session, func(sc mongo.SessionContext) error {
 		// Start transaction
 		err = session.StartTransaction()
 		if err != nil {
@@ -256,7 +254,7 @@ func (ts *userRepository) DeleteUsersById(ctx context.Context, id primitive.Obje
 		return errors.New("permision denied"), http.StatusForbidden
 	}
 
-	deleteResult, err := ts.collection.DeleteOne(context.TODO(), filter)
+	deleteResult, err := ts.collection.DeleteOne(ctx, filter)
 	if err != nil {
 		fmt.Println(err)
 		return err, 500

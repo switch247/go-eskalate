@@ -14,14 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type TaskController interface {
-	GetAllTasks(c *gin.Context)
-	CreateTasks(c *gin.Context)
-	GetTasksById(c *gin.Context)
-	UpdateTasksById(c *gin.Context)
-	DeleteTasksById(c *gin.Context)
-}
-
 type taskController struct {
 	TaskRepository Domain.TaskRepository
 }
@@ -47,7 +39,7 @@ func (tc *taskController) GetAllTasks(c *gin.Context) {
 	// var newTak Domain.Task
 	// v := validator.New()
 	// fmt.Print(v, newTak)
-	tasks, err, statusCode := tc.TaskRepository.GetTasks(logedUser)
+	tasks, err, statusCode := tc.TaskRepository.GetTasks(c, logedUser)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 		return
@@ -86,7 +78,7 @@ func (tc *taskController) CreateTasks(c *gin.Context) {
 	newTak.User_ID = userID.(string)
 
 	//
-	task, err, statusCode := tc.TaskRepository.CreateTasks(&newTak)
+	task, err, statusCode := tc.TaskRepository.CreateTasks(c, &newTak)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -108,7 +100,7 @@ func (tc *taskController) GetTasksById(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	task, err, statusCode := tc.TaskRepository.GetTasksById(objectID, logedUser)
+	task, err, statusCode := tc.TaskRepository.GetTasksById(c, objectID, logedUser)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
@@ -143,7 +135,7 @@ func (tc *taskController) UpdateTasksById(c *gin.Context) {
 		return
 	}
 
-	data, er, status := tc.TaskRepository.UpdateTasksById(objectID, updatedTask, logedUser)
+	data, er, status := tc.TaskRepository.UpdateTasksById(c, objectID, updatedTask, logedUser)
 	if er != nil {
 		c.IndentedJSON(status, gin.H{"error": er.Error()})
 		return
@@ -166,7 +158,7 @@ func (tc *taskController) DeleteTasksById(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	err, statusCode := tc.TaskRepository.DeleteTasksById(objectID, logedUser)
+	err, statusCode := tc.TaskRepository.DeleteTasksById(c, objectID, logedUser)
 	if err != nil {
 		c.IndentedJSON(statusCode, gin.H{"error": err.Error()})
 	} else {
