@@ -13,6 +13,7 @@ import (
 
 	"main/Domain"
 	"main/config"
+	"main/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -241,22 +242,7 @@ func (ts *taskRepository) UpdateTasksById(ctx context.Context, id primitive.Obje
 			return errors.New("user does not have permission to update this task")
 		}
 		// Update only the specified fields
-		if task.Title != "" {
-			NewTask.Title = task.Title
-		}
-		if task.Description != "" {
-			NewTask.Description = task.Description
-		}
-		if task.Status != "" {
-			NewTask.Status = task.Status
-		}
-		if !task.DueDate.IsZero() {
-			NewTask.DueDate = task.DueDate
-		}
-		if task.User_ID != "" {
-			fmt.Println("user id", task.User_ID)
-			NewTask.User_ID = task.User_ID
-		}
+		utils.UpdateFields(task, &NewTask)
 
 		filter := bson.D{{"_id", id}}
 		update := bson.D{

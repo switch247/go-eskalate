@@ -18,15 +18,18 @@ task-manager/
     ├── task_usecases.go
     └── user_usecases.go
 
-
+client
 client
 client        Router -> Controller-> UseCase -> Repository   ====>DataBase
 client                ----------------------------------
 client                               Domain
-
-
+client
+client
 
 old : [controller]-> [repository]  
 new : [controller] -> [usecase] -> [repository] 
 old : [model]
 new : [Domain]
+
+
+ go run .\Delivery\main.go

@@ -62,3 +62,18 @@ func ExtractUser(c *gin.Context) (Domain.OmitedUser, error) {
 		Is_Admin: is_admin.(bool),
 	}, nil
 }
+
+func UpdateFields(task Domain.Task, NewTask *Domain.Task) {
+	if task.Title != "" {
+		NewTask.Title = task.Title
+	}
+	if task.Description != "" {
+		NewTask.Description = task.Description
+	}
+	if task.Status != "" {
+		NewTask.Status = task.Status
+	}
+	if !task.DueDate.IsZero() {
+		NewTask.DueDate = task.DueDate
+	}
+}
