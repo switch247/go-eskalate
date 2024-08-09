@@ -10,14 +10,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type userController struct {
 	userUseCase Domain.UserUseCases
 }
 
-func NewUserController() (*userController, error) {
-	service_reference, err := UseCases.NewUserUseCase()
+func NewUserController(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*userController, error) {
+	service_reference, err := UseCases.NewUserUseCase(client, DataBase, _collection)
 	if err != nil {
 		return nil, err
 	}

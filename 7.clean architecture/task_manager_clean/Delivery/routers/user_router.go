@@ -2,6 +2,7 @@ package router
 
 import (
 	"main/Delivery/controllers"
+	"main/config"
 
 	"main/Infrastructure"
 
@@ -11,7 +12,13 @@ import (
 func UserRouter(r *gin.Engine) error {
 	userRouter := r.Group("/users", Infrastructure.AuthMiddleware())
 	{
-		userController, err := controllers.NewUserController()
+		client, err := config.GetClient()
+		if err != nil {
+			return err
+		}
+		DataBase := client.Database("test")
+		_collection := DataBase.Collection("users")
+		userController, err := controllers.NewUserController(client, DataBase, _collection)
 		if err != nil {
 			return err
 		}

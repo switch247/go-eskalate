@@ -9,7 +9,6 @@ import (
 
 	"main/Domain"
 	"main/Infrastructure"
-	"main/config"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -25,21 +24,15 @@ type authRepository struct {
 	collection *mongo.Collection
 }
 
-func NewAuthRepository() (*authRepository, error) {
-	client, err := config.GetClient()
-	DataBase := client.Database("test")
-	_collection := DataBase.Collection("users")
+func NewAuthRepository(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*authRepository, error) {
 	// _collection.Drop(context.TODO()) //uncomment this tho drop collection
-	if err == nil {
-		return &authRepository{
-			validator:  validator.New(),
-			client:     client,
-			DataBase:   DataBase,
-			collection: _collection,
-		}, nil
-	} else {
-		return nil, err
-	}
+	return &authRepository{
+		validator:  validator.New(),
+		client:     client,
+		DataBase:   DataBase,
+		collection: _collection,
+	}, nil
+
 }
 
 func (au *authRepository) Login(ctx context.Context, user *Domain.User) (string, error, int) {

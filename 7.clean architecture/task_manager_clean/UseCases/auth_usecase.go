@@ -8,6 +8,7 @@ import (
 	"main/Repositories"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type authUseCase struct {
@@ -15,8 +16,8 @@ type authUseCase struct {
 	contextTimeout time.Duration
 }
 
-func NewAuthUseCase() (Domain.AuthUseCase, error) {
-	service_reference, err := Repositories.NewAuthRepository()
+func NewAuthUseCase(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (Domain.AuthUseCase, error) {
+	service_reference, err := Repositories.NewAuthRepository(client, DataBase, _collection)
 	if err != nil {
 		return nil, err
 	}

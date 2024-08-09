@@ -12,14 +12,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type taskController struct {
 	TaskUseCase Domain.TaskUseCase
 }
 
-func NewTaskController() (*taskController, error) {
-	service_reference, err := UseCases.NewTaskUseCase()
+func NewTaskController(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*taskController, error) {
+	service_reference, err := UseCases.NewTaskUseCase(client, DataBase, _collection)
 	if err != nil {
 		return nil, err
 	}

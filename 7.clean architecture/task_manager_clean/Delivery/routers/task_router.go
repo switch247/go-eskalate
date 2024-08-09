@@ -2,6 +2,7 @@ package router
 
 import (
 	"main/Delivery/controllers"
+	"main/config"
 
 	"main/Infrastructure"
 
@@ -11,7 +12,14 @@ import (
 func TaskRouter(r *gin.Engine) error {
 	taskRouter := r.Group("/tasks", Infrastructure.AuthMiddleware())
 	{
-		taskController, err := controllers.NewTaskController()
+
+		client, err := config.GetClient()
+		if err != nil {
+			return err
+		}
+		DataBase := client.Database("test")
+		collection := DataBase.Collection("tasks")
+		taskController, err := controllers.NewTaskController(client, DataBase, collection)
 		if err != nil {
 			return err
 		}

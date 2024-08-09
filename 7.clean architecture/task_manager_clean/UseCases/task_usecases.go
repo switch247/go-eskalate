@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type taskUseCase struct {
@@ -16,8 +17,8 @@ type taskUseCase struct {
 	contextTimeout time.Duration
 }
 
-func NewTaskUseCase() (*taskUseCase, error) {
-	service_reference, err := Repositories.NewTaskRepository()
+func NewTaskUseCase(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*taskUseCase, error) {
+	service_reference, err := Repositories.NewTaskRepository(client, DataBase, _collection)
 	if err != nil {
 		return nil, err
 	}

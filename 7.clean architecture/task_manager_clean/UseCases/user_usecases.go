@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type userUseCases struct {
@@ -15,8 +16,8 @@ type userUseCases struct {
 	contextTimeout time.Duration
 }
 
-func NewUserUseCase() (*userUseCases, error) {
-	service_reference, err := Repositories.NewUserRepository()
+func NewUserUseCase(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*userUseCases, error) {
+	service_reference, err := Repositories.NewUserRepository(client, DataBase, _collection)
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,7 @@ package router
 
 import (
 	"main/Delivery/controllers"
+	"main/config"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,7 +10,13 @@ import (
 func AuthRouter(r *gin.Engine) error {
 	authRouter := r.Group("/auth")
 	{
-		authController, err := controllers.NewAuthController()
+		client, err := config.GetClient()
+		if err != nil {
+			return err
+		}
+		DataBase := client.Database("test")
+		_collection := DataBase.Collection("users")
+		authController, err := controllers.NewAuthController(client, DataBase, _collection)
 		if err != nil {
 			return err
 		}

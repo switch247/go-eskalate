@@ -12,7 +12,6 @@ import (
 	// "os"
 
 	"main/Domain"
-	"main/config"
 	"main/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -30,25 +29,18 @@ type taskRepository struct {
 	collection *mongo.Collection
 }
 
-func NewTaskRepository() (*taskRepository, error) {
-	var collection *mongo.Collection
-	var DataBase *mongo.Database
-	client, err := config.GetClient()
-	if err == nil {
-		DataBase = client.Database("test")
-		collection = DataBase.Collection("tasks")
-		// collection.Drop(context.TODO()) //uncomment this tho drop collection
-		ts := &taskRepository{
-			client:     client,
-			validator:  validator.New(),
-			DataBase:   DataBase,
-			collection: collection,
-		}
+func NewTaskRepository(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*taskRepository, error) {
 
-		return ts, nil
-	} else {
-		return nil, err
+	// collection.Drop(context.TODO()) //uncomment this tho drop collection
+	ts := &taskRepository{
+		client:     client,
+		validator:  validator.New(),
+		DataBase:   DataBase,
+		collection: _collection,
 	}
+
+	return ts, nil
+
 }
 
 // create task

@@ -13,7 +13,6 @@ import (
 
 	"main/Domain"
 	"main/Infrastructure"
-	"main/config"
 	"main/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -31,20 +30,17 @@ type userRepository struct {
 	collection *mongo.Collection
 }
 
-func NewUserRepository() (*userRepository, error) {
-	client, err := config.GetClient()
-	DataBase := client.Database("test")
-	_collection := DataBase.Collection("users")
-	if err == nil {
-		return &userRepository{
-			validator:  validator.New(),
-			client:     client,
-			DataBase:   DataBase,
-			collection: _collection,
-		}, nil
-	} else {
-		return nil, err
-	}
+func NewUserRepository(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*userRepository, error) {
+	// client, err := config.GetClient()
+	// DataBase := client.Database("test")
+	// _collection := DataBase.Collection("users")
+
+	return &userRepository{
+		validator:  validator.New(),
+		client:     client,
+		DataBase:   DataBase,
+		collection: _collection,
+	}, nil
 
 }
 
