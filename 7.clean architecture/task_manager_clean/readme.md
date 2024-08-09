@@ -32,4 +32,11 @@ old : [model]
 new : [Domain]
 
 
- go run .\Delivery\main.go
+go run .\Delivery\main.go
+
+
+
+<!-- air --build.cmd "go build -o bin/api cmd/run.go" --build.bin "./bin/api" -->
+
+## run
+air --build.cmd "go run Delivery/main.go" --build.bin "./bin/api"
