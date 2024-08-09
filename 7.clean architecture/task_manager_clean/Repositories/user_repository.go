@@ -31,9 +31,7 @@ type userRepository struct {
 }
 
 func NewUserRepository(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*userRepository, error) {
-	// client, err := config.GetClient()
-	// DataBase := client.Database("test")
-	// _collection := DataBase.Collection("users")
+
 
 	return &userRepository{
 		validator:  validator.New(),
