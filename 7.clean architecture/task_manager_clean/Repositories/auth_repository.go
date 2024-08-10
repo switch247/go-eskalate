@@ -24,6 +24,7 @@ type authRepository struct {
 	collection *mongo.Collection
 }
 
+
 func NewAuthRepository(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*authRepository, error) {
 	// _collection.Drop(context.TODO()) //uncomment this tho drop collection
 	return &authRepository{

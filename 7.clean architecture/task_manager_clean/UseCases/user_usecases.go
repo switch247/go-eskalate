@@ -3,12 +3,10 @@ package UseCases
 import (
 	"context"
 	"main/Domain"
-	"main/Repositories"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type userUseCases struct {
@@ -16,11 +14,11 @@ type userUseCases struct {
 	contextTimeout time.Duration
 }
 
-func NewUserUseCase(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*userUseCases, error) {
-	service_reference, err := Repositories.NewUserRepository(client, DataBase, _collection)
-	if err != nil {
-		return nil, err
-	}
+func NewUserUseCase(service_reference Domain.UserRepository) (*userUseCases, error) {
+	// service_reference, err := Repositories.NewUserRepository(client, DataBase, _collection)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	return &userUseCases{
 		userRepository: service_reference,
 		contextTimeout: time.Second * 10,

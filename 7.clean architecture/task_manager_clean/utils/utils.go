@@ -58,7 +58,7 @@ func ExtractUser(c *gin.Context) (Domain.OmitedUser, error) {
 	}
 
 	return Domain.OmitedUser{
-		ID:       UserobjectID,
+		ID: UserobjectID,
 		Is_Admin: is_admin.(bool),
 	}, nil
 }

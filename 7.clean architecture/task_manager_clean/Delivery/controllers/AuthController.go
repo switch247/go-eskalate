@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"main/Domain"
-	"main/UseCases"
 
 	// "main/utils"
 
@@ -12,7 +11,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
-	"go.mongodb.org/mongo-driver/mongo"
 	// "go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -20,12 +18,12 @@ type authController struct {
 	AuthUseCase Domain.AuthUseCase
 }
 
-func NewAuthController(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*authController, error) {
+func NewAuthController(service_reference Domain.AuthUseCase) (*authController, error) {
 
-	service_reference, err := UseCases.NewAuthUseCase(client, DataBase, _collection)
-	if err != nil {
-		return nil, err
-	}
+	// service_reference, err := UseCases.NewAuthUseCase(client, DataBase, _collection)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	return &authController{
 		AuthUseCase: service_reference,
 	}, nil

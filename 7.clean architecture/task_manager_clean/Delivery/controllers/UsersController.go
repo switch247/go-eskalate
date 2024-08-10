@@ -3,25 +3,19 @@ package controllers
 import (
 	"fmt"
 	"main/Domain"
-	"main/UseCases"
 	"main/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type userController struct {
 	userUseCase Domain.UserUseCases
 }
 
-func NewUserController(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*userController, error) {
-	service_reference, err := UseCases.NewUserUseCase(client, DataBase, _collection)
-	if err != nil {
-		return nil, err
-	}
+func NewUserController(service_reference Domain.UserUseCases) (*userController, error) {
 	return &userController{
 		userUseCase: service_reference,
 	}, nil

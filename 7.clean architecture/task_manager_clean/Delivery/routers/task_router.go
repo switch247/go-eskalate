@@ -2,6 +2,8 @@ package router
 
 import (
 	"main/Delivery/controllers"
+	"main/Repositories"
+	"main/UseCases"
 	"main/config"
 
 	"main/Infrastructure"
@@ -19,7 +21,10 @@ func TaskRouter(r *gin.Engine) error {
 		}
 		DataBase := client.Database("test")
 		collection := DataBase.Collection("tasks")
-		taskController, err := controllers.NewTaskController(client, DataBase, collection)
+
+		taskRepository, err := Repositories.NewTaskRepository(client, DataBase, collection)
+		taskUseCase, err := UseCases.NewTaskUseCase(taskRepository)
+		taskController, err := controllers.NewTaskController(taskUseCase)
 		if err != nil {
 			return err
 		}
