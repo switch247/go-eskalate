@@ -1,202 +1,203 @@
 package Repositories_test
 
-// import (
-// 	"context"
-// 	"testing"
-// 	"time"
+import (
+	"context"
+	"main/mongo"
+	"testing"
+	"time"
 
-// 	"github.com/stretchr/testify/assert"
-// 	"github.com/stretchr/testify/suite"
-// 	"go.mongodb.org/mongo-driver/bson/primitive"
-// 	"go.mongodb.org/mongo-driver/mongo"
-// 	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
-// 	"main/Domain"
-// 	repo "main/Repositories"
-// 	"main/utils"
-// )
+	// "go.mongodb.org/mongo-driver/mongo"
 
-// type TaskRepositoryTestSuite struct {
-// 	suite.Suite
-// 	client     *mongo.Client
-// 	database   *mongo.Database
-// 	collection *mongo.Collection
-// 	repo       Domain.TaskRepository
-// }
+	"main/Domain"
+	repo "main/Repositories"
+	"main/utils"
+)
 
-// func (suite *TaskRepositoryTestSuite) SetupTest() {
-// 	// Initialize the Mongo client and database
-// 	url := "mongodb://localhost:27017"
-// 	clientOptions := options.Client().ApplyURI(url)
-// 	client, err := mongo.Connect(context.TODO(), clientOptions)
-// 	if err != nil {
-// 		suite.T().Errorf("failed to create Mongo client: %v", err)
-// 		return
-// 	}
+type TaskRepositoryTestSuite struct {
+	suite.Suite
+	client     mongo.Client
+	database   mongo.Database
+	collection mongo.Collection
+	repo       Domain.TaskRepository
+}
 
-// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-// 	defer cancel()
+func (suite *TaskRepositoryTestSuite) SetupTest() {
+	// Initialize the Mongo client and database
+	url := "mongodb://localhost:27017"
+	// clientOptions := options.Client().ApplyURI(url)
+	client, err := mongo.NewClient(url)
+	if err != nil {
+		suite.T().Errorf("failed to create Mongo client: %v", err)
+		return
+	}
 
-// 	err = client.Ping(ctx, nil)
-// 	if err != nil {
-// 		suite.T().Errorf("Failed to connect to MongoDB: %v", err)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-// 		return
-// 	}
+	err = client.Ping(ctx)
+	if err != nil {
+		suite.T().Errorf("Failed to connect to MongoDB: %v", err)
 
-// 	database := client.Database("testing")
-// 	collection := database.Collection("tasks")
+		return
+	}
 
-// 	repo, err := repo.NewTaskRepository(client, database, collection)
-// 	if err != nil {
-// 		suite.T().Errorf("failed to create authRepository: %v", err)
-// 		return
-// 	}
+	database := client.Database("testing")
+	collection := database.Collection("tasks")
 
-// 	suite.client = client
-// 	suite.database = database
-// 	suite.collection = collection
-// 	suite.repo = repo
-// }
+	repo, err := repo.NewTaskRepository(client, database, collection)
+	if err != nil {
+		suite.T().Errorf("failed to create authRepository: %v", err)
+		return
+	}
 
-// func (suite *TaskRepositoryTestSuite) TearDownTest() {
-// 	// Clean up the database after the tests
-// 	if err := suite.database.Drop(context.Background()); err != nil {
-// 		suite.T().Errorf("failed to drop database: %v", err)
-// 	}
-// }
+	suite.client = client
+	suite.database = database
+	suite.collection = collection
+	suite.repo = repo
+}
 
-// func (suite *TaskRepositoryTestSuite) TestCreateTask() {
-// 	// Create a new task
-// 	task := &Domain.Task{
-// 		Title:       "Test Task",
-// 		Description: "This is a test task.",
-// 		Status:      "To Do",
-// 		DueDate:     time.Now().Add(time.Hour * 24 * 7),
-// 		User_ID:     primitive.NewObjectID().Hex(),
-// 	}
+func (suite *TaskRepositoryTestSuite) TearDownTest() {
+	// Clean up the database after the tests
+	// if err := suite.database.Drop(context.Background()); err != nil {
+	// 	suite.T().Errorf("failed to drop database: %v", err)
+	// }
+}
 
-// 	createdTask, err, statusCode := suite.repo.CreateTasks(context.Background(), task)
-// 	assert.NoError(suite.T(), err)
-// 	assert.Equal(suite.T(), 201, statusCode)
-// 	assert.Equal(suite.T(), task.Title, createdTask.Title)
-// 	assert.Equal(suite.T(), task.Description, createdTask.Description)
-// 	assert.Equal(suite.T(), task.Status, createdTask.Status)
-// 	assert.Equal(suite.T(), task.User_ID, createdTask.User_ID)
-// }
+func (suite *TaskRepositoryTestSuite) TestCreateTask() {
+	// Create a new task
+	task := &Domain.Task{
+		Title:       "Test Task",
+		Description: "This is a test task.",
+		Status:      "To Do",
+		DueDate:     time.Now().Add(time.Hour * 24 * 7),
+		User_ID:     primitive.NewObjectID().Hex(),
+	}
 
-// func (suite *TaskRepositoryTestSuite) TestGetTasks() {
-// 	// Create a new task
-// 	obj_id := primitive.NewObjectID()
-// 	task := &Domain.Task{
-// 		Title:       "Test Task 1",
-// 		Description: "This is a test task.",
-// 		Status:      "To Do",
-// 		DueDate:     time.Now().Add(time.Hour * 24 * 7),
-// 		User_ID:     utils.ObjectIdToString(obj_id),
-// 	}
+	createdTask, err, statusCode := suite.repo.CreateTasks(context.Background(), task)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), 201, statusCode)
+	assert.Equal(suite.T(), task.Title, createdTask.Title)
+	assert.Equal(suite.T(), task.Description, createdTask.Description)
+	assert.Equal(suite.T(), task.Status, createdTask.Status)
+	assert.Equal(suite.T(), task.User_ID, createdTask.User_ID)
+}
 
-// 	_, err, _ := suite.repo.CreateTasks(context.Background(), task)
-// 	assert.NoError(suite.T(), err)
-// 	// flush, err := suite.collection.DeleteMany(context.Background(), primitive.M{})
+func (suite *TaskRepositoryTestSuite) TestGetTasks() {
+	// Create a new task
+	obj_id := primitive.NewObjectID()
+	task := &Domain.Task{
+		Title:       "Test Task 1",
+		Description: "This is a test task.",
+		Status:      "To Do",
+		DueDate:     time.Now().Add(time.Hour * 24 * 7),
+		User_ID:     utils.ObjectIdToString(obj_id),
+	}
 
-// 	// Get all tasks
-// 	user := Domain.OmitedUser{
-// 		ID:       obj_id,
-// 		Is_Admin: true,
-// 	}
+	_, err, _ := suite.repo.CreateTasks(context.Background(), task)
+	assert.NoError(suite.T(), err)
+	// flush, err := suite.collection.DeleteMany(context.Background(), primitive.M{})
 
-// 	tasks, err, statusCode := suite.repo.GetTasks(context.Background(), user)
-// 	assert.NoError(suite.T(), err)
-// 	assert.Equal(suite.T(), 200, statusCode)
-// 	assert.Greater(suite.T(), len(tasks), 0)
-// }
+	// Get all tasks
+	user := Domain.OmitedUser{
+		ID:       obj_id,
+		Is_Admin: true,
+	}
 
-// func (suite *TaskRepositoryTestSuite) TestGetTaskById() {
-// 	// Create a new task
-// 	task := &Domain.Task{
-// 		Title:       "Test Task 2",
-// 		Description: "This is a test task.",
-// 		Status:      "To Do",
-// 		DueDate:     time.Now().Add(time.Hour * 24 * 7),
-// 		User_ID:     primitive.NewObjectID().Hex(),
-// 	}
+	tasks, err, statusCode := suite.repo.GetTasks(context.Background(), user)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), 200, statusCode)
+	assert.Greater(suite.T(), len(tasks), 0)
+}
 
-// 	createdTask, err, _ := suite.repo.CreateTasks(context.Background(), task)
-// 	assert.NoError(suite.T(), err)
+func (suite *TaskRepositoryTestSuite) TestGetTaskById() {
+	// Create a new task
+	task := &Domain.Task{
+		Title:       "Test Task 2",
+		Description: "This is a test task.",
+		Status:      "To Do",
+		DueDate:     time.Now().Add(time.Hour * 24 * 7),
+		User_ID:     primitive.NewObjectID().Hex(),
+	}
 
-// 	// Get the task by ID
-// 	obj_id, _ := utils.StringToObjectId(createdTask.User_ID)
-// 	user := Domain.OmitedUser{
-// 		ID:       obj_id,
-// 		Is_Admin: true,
-// 	}
+	createdTask, err, _ := suite.repo.CreateTasks(context.Background(), task)
+	assert.NoError(suite.T(), err)
 
-// 	fetchedTask, err, statusCode := suite.repo.GetTasksById(context.Background(), createdTask.ID, user)
-// 	assert.NoError(suite.T(), err)
-// 	assert.Equal(suite.T(), 200, statusCode)
-// 	assert.Equal(suite.T(), createdTask.Title, fetchedTask.Title)
-// 	assert.Equal(suite.T(), createdTask.Description, fetchedTask.Description)
-// 	assert.Equal(suite.T(), createdTask.Status, fetchedTask.Status)
-// 	assert.Equal(suite.T(), createdTask.User_ID, fetchedTask.User_ID)
-// }
+	// Get the task by ID
+	obj_id, _ := utils.StringToObjectId(createdTask.User_ID)
+	user := Domain.OmitedUser{
+		ID:       obj_id,
+		Is_Admin: true,
+	}
 
-// func (suite *TaskRepositoryTestSuite) TestUpdateTask() {
-// 	// Create a new task
-// 	task := &Domain.Task{
-// 		Title:       "Test Task 3",
-// 		Description: "This is a test task.",
-// 		Status:      "To Do",
-// 		DueDate:     time.Now().Add(time.Hour * 24 * 7),
-// 		User_ID:     primitive.NewObjectID().Hex(),
-// 	}
+	fetchedTask, err, statusCode := suite.repo.GetTasksById(context.Background(), createdTask.ID, user)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), 200, statusCode)
+	assert.Equal(suite.T(), createdTask.Title, fetchedTask.Title)
+	assert.Equal(suite.T(), createdTask.Description, fetchedTask.Description)
+	assert.Equal(suite.T(), createdTask.Status, fetchedTask.Status)
+	assert.Equal(suite.T(), createdTask.User_ID, fetchedTask.User_ID)
+}
 
-// 	createdTask, err, _ := suite.repo.CreateTasks(context.Background(), task)
-// 	assert.NoError(suite.T(), err)
+func (suite *TaskRepositoryTestSuite) TestUpdateTask() {
+	// Create a new task
+	task := &Domain.Task{
+		Title:       "Test Task 3",
+		Description: "This is a test task.",
+		Status:      "To Do",
+		DueDate:     time.Now().Add(time.Hour * 24 * 7),
+		User_ID:     primitive.NewObjectID().Hex(),
+	}
 
-// 	// Update the task
-// 	updatedTask := Domain.Task{
-// 		Title:       "Updated Test Task",
-// 		Description: "This is an updated test task.",
-// 		Status:      "In Progress",
-// 		DueDate:     time.Now().Add(time.Hour * 24 * 14),
-// 	}
-// 	obj_id, _ := utils.StringToObjectId(createdTask.User_ID)
-// 	user := Domain.OmitedUser{
-// 		ID:       obj_id,
-// 		Is_Admin: true,
-// 	}
+	createdTask, err, _ := suite.repo.CreateTasks(context.Background(), task)
+	assert.NoError(suite.T(), err)
 
-// 	_, err, statusCode := suite.repo.UpdateTasksById(context.Background(), createdTask.ID, updatedTask, user)
-// 	assert.NoError(suite.T(), err)
-// 	assert.Equal(suite.T(), 200, statusCode)
-// }
+	// Update the task
+	updatedTask := Domain.Task{
+		Title:       "Updated Test Task",
+		Description: "This is an updated test task.",
+		Status:      "In Progress",
+		DueDate:     time.Now().Add(time.Hour * 24 * 14),
+	}
+	obj_id, _ := utils.StringToObjectId(createdTask.User_ID)
+	user := Domain.OmitedUser{
+		ID:       obj_id,
+		Is_Admin: true,
+	}
 
-// func (suite *TaskRepositoryTestSuite) TestDeleteTask() {
-// 	// Create a new task
-// 	task := &Domain.Task{
-// 		Title:       "Test Task 4",
-// 		Description: "This is a test task.",
-// 		Status:      "To Do",
-// 		DueDate:     time.Now().Add(time.Hour * 24 * 7),
-// 		User_ID:     primitive.NewObjectID().Hex(),
-// 	}
+	_, err, statusCode := suite.repo.UpdateTasksById(context.Background(), createdTask.ID, updatedTask, user)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), 200, statusCode)
+}
 
-// 	createdTask, err, _ := suite.repo.CreateTasks(context.Background(), task)
-// 	assert.NoError(suite.T(), err)
+func (suite *TaskRepositoryTestSuite) TestDeleteTask() {
+	// Create a new task
+	task := &Domain.Task{
+		Title:       "Test Task 4",
+		Description: "This is a test task.",
+		Status:      "To Do",
+		DueDate:     time.Now().Add(time.Hour * 24 * 7),
+		User_ID:     primitive.NewObjectID().Hex(),
+	}
 
-// 	// Delete the task
-// 	obj_id, _ := utils.StringToObjectId(createdTask.User_ID)
-// 	user := Domain.OmitedUser{
-// 		ID:       obj_id,
-// 		Is_Admin: true,
-// 	}
+	createdTask, err, _ := suite.repo.CreateTasks(context.Background(), task)
+	assert.NoError(suite.T(), err)
 
-// 	err, statusCode := suite.repo.DeleteTasksById(context.Background(), createdTask.ID, user)
-// 	assert.NoError(suite.T(), err)
-// 	assert.Equal(suite.T(), 200, statusCode)
-// }
+	// Delete the task
+	obj_id, _ := utils.StringToObjectId(createdTask.User_ID)
+	user := Domain.OmitedUser{
+		ID:       obj_id,
+		Is_Admin: true,
+	}
 
-// func TestTaskRepository(t *testing.T) {
-// 	suite.Run(t, new(TaskRepositoryTestSuite))
-// }
+	err, statusCode := suite.repo.DeleteTasksById(context.Background(), createdTask.ID, user)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), 200, statusCode)
+}
+
+func TestTaskRepository(t *testing.T) {
+	suite.Run(t, new(TaskRepositoryTestSuite))
+}
