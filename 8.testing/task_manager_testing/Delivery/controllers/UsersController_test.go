@@ -17,19 +17,25 @@ import (
 	"main/Delivery/controllers"
 	"main/Domain"
 	"main/mocks"
+	"main/utils"
 )
 
 type UserControllerTestSuite struct {
 	suite.Suite
 	mockUserUseCase *mocks.UserUseCases
 	userController  controllers.UserController
+	userID          primitive.ObjectID
+	is_admin        bool
 }
 
 func (suite *UserControllerTestSuite) SetupTest() {
+	obj_id, _ := utils.StringToObjectId("66bc5f53f0e7bd3ca1d6bec9")
 	suite.mockUserUseCase = new(mocks.UserUseCases)
 	var err error
 	suite.userController, err = controllers.NewUserController(suite.mockUserUseCase)
 	assert.NoError(suite.T(), err)
+	suite.userID = obj_id
+	suite.is_admin = true
 }
 
 func (suite *UserControllerTestSuite) TestGetUsers() {
@@ -83,7 +89,7 @@ func (suite *UserControllerTestSuite) TestGetUsersError() {
 func (suite *UserControllerTestSuite) TestGetUser() {
 	// Arrange
 	user := Domain.OmitedUser{
-		ID:    primitive.NewObjectID(),
+		ID:    suite.userID,
 		Email: "test@example.com",
 	}
 
@@ -96,7 +102,8 @@ func (suite *UserControllerTestSuite) TestGetUser() {
 	c.Params = gin.Params{
 		{Key: "id", Value: user.ID.Hex()},
 	}
-	c.Set("user", user)
+	c.Set("user_id", suite.userID)
+	c.Set("is_admin", suite.is_admin)
 
 	// Act
 	suite.userController.GetUser(c)
@@ -162,9 +169,8 @@ func (suite *UserControllerTestSuite) TestUpdateUser() {
 	c.Params = gin.Params{
 		{Key: "id", Value: userID.Hex()},
 	}
-	// c.Set("user", currentUser)
-	user_id := primitive.NewObjectID().Hex()
-	c.Set("user_id", user_id)
+	c.Set("user_id", suite.userID)
+	c.Set("is_admin", suite.is_admin)
 
 	suite.mockUserUseCase.On("UpdateUsersById", c, userID, user, currentUser).Return(updatedUser, nil, 200).Once()
 
@@ -193,9 +199,8 @@ func (suite *UserControllerTestSuite) TestDeleteUser() {
 	c.Params = gin.Params{
 		{Key: "id", Value: userID.Hex()},
 	}
-	// c.Set("user", currentUser)
-	user_id := primitive.NewObjectID().Hex()
-	c.Set("user_id", user_id)
+	c.Set("user_id", suite.userID)
+	c.Set("is_admin", suite.is_admin)
 
 	suite.mockUserUseCase.On("DeleteUsersById", c, userID, currentUser).Return(nil, 200).Once()
 

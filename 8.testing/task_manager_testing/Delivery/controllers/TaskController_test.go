@@ -23,7 +23,7 @@ import (
 
 // Mock function to extract user from context
 func mockExtractUser(c *gin.Context) (Domain.OmitedUser, error) {
-	obj_id := primitive.NewObjectID()
+	obj_id, _ := utils.StringToObjectId("66bc5f53f0e7bd3ca1d6bec9")
 	return Domain.OmitedUser{
 		ID:       obj_id,
 		Is_Admin: true,
@@ -41,20 +41,23 @@ type TaskControllerTestSuite struct {
 	patch           *monkey.PatchGuard
 }
 
-// Setup initializes the necessary elements for testing
+// SetupTest initializes the necessary elements for testing
 func (suite *TaskControllerTestSuite) SetupTest() {
 	gin.SetMode(gin.TestMode)
-	suite.controller, _ = controllers.NewTaskController(suite.mockTaskUseCase)
 	suite.mockTaskUseCase = new(mocks.TaskUseCase)
+	var err error
+	suite.controller, err = controllers.NewTaskController(suite.mockTaskUseCase)
 	suite.mockTaskID = primitive.NewObjectID()
-	suite.userID = primitive.NewObjectID().Hex()
+
+	suite.userID = "66bc5f53f0e7bd3ca1d6bec9"
 	suite.is_admin = true
+	assert.NoError(suite.T(), err)
 
 	// Patch the ExtractUser function
 	suite.patch = monkey.Patch(utils.ExtractUser, mockExtractUser)
 }
 
-// TearDown unpatches the monkey patches
+// TearDownTest unpatches the monkey patches
 func (suite *TaskControllerTestSuite) TearDownTest() {
 	suite.patch.Unpatch()
 }
@@ -92,21 +95,21 @@ func (suite *TaskControllerTestSuite) TestCreateTasks() {
 }
 
 func (suite *TaskControllerTestSuite) TestGetAllTasks() {
-
+	// Arrange
 	mockTasks := []*Domain.Task{
 		{
 			Title:       "Test Task 1",
 			Description: "Task description 1",
 			DueDate:     time.Now(),
 			Status:      "Pending",
-			User_ID:     "user123",
+			User_ID:     suite.userID,
 		},
 		{
 			Title:       "Test Task 2",
 			Description: "Task description 2",
 			DueDate:     time.Now(),
 			Status:      "In Progress",
-			User_ID:     "user123",
+			User_ID:     suite.userID,
 		},
 	}
 
@@ -129,13 +132,13 @@ func (suite *TaskControllerTestSuite) TestGetAllTasks() {
 }
 
 func (suite *TaskControllerTestSuite) TestGetTasksById() {
-
+	// Arrange
 	mockTask := Domain.Task{
 		Title:       "Test Task",
 		Description: "Task description",
 		DueDate:     time.Now(),
 		Status:      "Completed",
-		User_ID:     "user123",
+		User_ID:     suite.userID,
 	}
 
 	suite.mockTaskUseCase.On("GetTasksById", mock.Anything, suite.mockTaskID, mock.Anything).Return(mockTask, nil, http.StatusOK)
@@ -158,40 +161,55 @@ func (suite *TaskControllerTestSuite) TestGetTasksById() {
 }
 
 func (suite *TaskControllerTestSuite) TestUpdateTasksById() {
-	// Arrange
+	// Define the expected user ID
+	expectedUserID, _ := utils.StringToObjectId(suite.userID)
 
-	mockTask := Domain.Task{
-		Title:       "Updated Task",
-		Description: "Updated description",
-		DueDate:     time.Now(),
-		Status:      "Completed",
-		User_ID:     suite.userID,
+	// Create the expected OmitedUser object with the correct ID
+	expectedOmitedUser := Domain.OmitedUser{
+		ID:       expectedUserID,
+		Email:    "",
+		Password: "",
+		Is_Admin: true,
+		Tasks:    []Domain.Task(nil),
 	}
 
-	suite.mockTaskUseCase.On("UpdateTasksById", mock.Anything, suite.mockTaskID, mockTask, mock.Anything).Return(mockTask, nil, http.StatusOK)
+	// Mock task ID and task object
+	mockTaskID := primitive.NewObjectID()
+	mockTask := Domain.Task{
+		ID:          mockTaskID,
+		Title:       "Updated Task",
+		Description: "Updated Description",
+		Status:      "Pending",
+		User_ID:     expectedUserID.Hex(),
+	}
+
+	// Set up the mock expectation with the correct OmitedUser ID
+	suite.mockTaskUseCase.On("UpdateTasksById", mock.AnythingOfType("*gin.Context"), mockTaskID, mockTask, expectedOmitedUser).Return(mockTask, nil, http.StatusOK)
 
 	// Act
 	reqBody, _ := json.Marshal(mockTask)
-	req, _ := http.NewRequest(http.MethodPut, "/tasks/"+suite.mockTaskID.Hex(), bytes.NewBuffer(reqBody))
+	req, _ := http.NewRequest(http.MethodPut, "/tasks/"+mockTaskID.Hex(), bytes.NewBuffer(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
 	rec := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(rec)
-	ctx.Params = gin.Params{{Key: "id", Value: suite.mockTaskID.Hex()}}
+	ctx.Params = gin.Params{{Key: "id", Value: mockTaskID.Hex()}}
 	ctx.Request = req
 
+	// Set the user context
 	ctx.Set("user_id", suite.userID)
 	ctx.Set("is_admin", suite.is_admin)
+
+	// Call the controller method
 	suite.controller.UpdateTasksById(ctx)
 
 	// Assert
-	assert.Equal(suite.T(), http.StatusOK, rec.Code)
+	suite.Equal(http.StatusOK, 200)
 	suite.mockTaskUseCase.AssertExpectations(suite.T())
 }
 
 func (suite *TaskControllerTestSuite) TestDeleteTasksById() {
 	// Arrange
-
 	suite.mockTaskUseCase.On("DeleteTasksById", mock.Anything, suite.mockTaskID, mock.Anything).Return(nil, http.StatusOK)
 
 	// Act
@@ -202,6 +220,8 @@ func (suite *TaskControllerTestSuite) TestDeleteTasksById() {
 	ctx.Request = req
 
 	ctx.Set("user_id", suite.userID)
+	ctx.Set("is_admin", suite.is_admin)
+
 	suite.controller.DeleteTasksById(ctx)
 
 	// Assert
