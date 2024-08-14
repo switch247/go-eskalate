@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"bou.ke/monkey"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -24,6 +25,7 @@ type UserControllerTestSuite struct {
 	suite.Suite
 	mockUserUseCase *mocks.UserUseCases
 	userController  controllers.UserController
+	patch           *monkey.PatchGuard
 	userID          primitive.ObjectID
 	is_admin        bool
 }
@@ -36,6 +38,7 @@ func (suite *UserControllerTestSuite) SetupTest() {
 	assert.NoError(suite.T(), err)
 	suite.userID = obj_id
 	suite.is_admin = true
+	suite.patch = monkey.Patch(utils.ExtractUser, mockExtractUser)
 }
 
 func (suite *UserControllerTestSuite) TestGetUsers() {
@@ -85,15 +88,14 @@ func (suite *UserControllerTestSuite) TestGetUsersError() {
 	// assert.Equal(suite.T(), "{\"error\":\"get users error\"}", w.Body.String())
 	suite.mockUserUseCase.AssertExpectations(suite.T())
 }
-
 func (suite *UserControllerTestSuite) TestGetUser() {
 	// Arrange
 	user := Domain.OmitedUser{
-		ID:    suite.userID,
-		Email: "test@example.com",
+		ID:       suite.userID,
+		Is_Admin: suite.is_admin,
 	}
 
-	suite.mockUserUseCase.On("GetUsersById", mock.Anything, user.ID, user).Return(user, nil, 200).Once()
+	suite.mockUserUseCase.On("GetUsersById", mock.AnythingOfType("*gin.Context"), user.ID, user).Return(user, nil, 200).Once()
 
 	req, _ := http.NewRequest(http.MethodGet, "/users/"+user.ID.Hex(), nil)
 	w := httptest.NewRecorder()
@@ -109,8 +111,7 @@ func (suite *UserControllerTestSuite) TestGetUser() {
 	suite.userController.GetUser(c)
 
 	// Assert
-	assert.Equal(suite.T(), http.StatusOK, w.Code)
-	// assert.Equal(suite.T(), "{\"user\":{\"ID\":\""+user.ID.Hex()+"\",\"Name\":\"Test User\",\"Email\":\"test@example.com\"}}", w.Body.String())
+	suite.Equal(http.StatusOK, w.Code)
 	suite.mockUserUseCase.AssertExpectations(suite.T())
 }
 
@@ -145,14 +146,14 @@ func (suite *UserControllerTestSuite) TestCreateUser() {
 
 func (suite *UserControllerTestSuite) TestUpdateUser() {
 	// Arrange
-	userID := primitive.NewObjectID()
+	userID := suite.userID
 	user := Domain.User{
+		ID:    userID,
 		Email: "updated@example.com",
 	}
 
 	currentUser := Domain.OmitedUser{
 		ID:       userID,
-		Email:    "test@example.com",
 		Is_Admin: true,
 	}
 
@@ -179,30 +180,27 @@ func (suite *UserControllerTestSuite) TestUpdateUser() {
 
 	// Assert
 	assert.Equal(suite.T(), http.StatusOK, w.Code)
-	// assert.Equal(suite.T(), "{\"user\":{\"ID\":\""+userID.Hex()+"\",\"Name\":\"Updated User\",\"Email\":\"updated@example.com\"}}", w.Body.String())
 	suite.mockUserUseCase.AssertExpectations(suite.T())
 }
 
 func (suite *UserControllerTestSuite) TestDeleteUser() {
 	// Arrange
-	userID := primitive.NewObjectID()
 	currentUser := Domain.OmitedUser{
-		ID:       userID,
+		ID:       suite.userID,
 		Is_Admin: true,
-		Email:    "test@example.com",
 	}
 
-	req, _ := http.NewRequest(http.MethodDelete, "/users/"+userID.Hex(), nil)
+	req, _ := http.NewRequest(http.MethodDelete, "/users/"+currentUser.ID.Hex(), nil)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Params = gin.Params{
-		{Key: "id", Value: userID.Hex()},
+		{Key: "id", Value: currentUser.ID.Hex()},
 	}
 	c.Set("user_id", suite.userID)
 	c.Set("is_admin", suite.is_admin)
 
-	suite.mockUserUseCase.On("DeleteUsersById", c, userID, currentUser).Return(nil, 200).Once()
+	suite.mockUserUseCase.On("DeleteUsersById", c, currentUser.ID, currentUser).Return(nil, 200).Once()
 
 	// Act
 	suite.userController.DeleteUser(c)

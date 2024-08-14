@@ -8,12 +8,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"bou.ke/monkey"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	"main/Delivery/controllers"
 	"main/Domain"
+	"main/Infrastructure"
 	"main/mocks"
 )
 
@@ -21,6 +23,19 @@ type AuthControllerTestSuite struct {
 	suite.Suite
 	mockAuthUseCase *mocks.AuthUseCase
 	authController  controllers.AuthController
+
+	patch *monkey.PatchGuard
+}
+
+func mockCompare(hashedPassword string, plainPassword string) bool {
+	if plainPassword == hashedPassword {
+		return true
+	}
+	return false
+}
+
+func mockGenerate(password string) (string, error) {
+	return password, nil
 }
 
 func (suite *AuthControllerTestSuite) SetupTest() {
@@ -28,6 +43,9 @@ func (suite *AuthControllerTestSuite) SetupTest() {
 	var err error
 	suite.authController, err = controllers.NewAuthController(suite.mockAuthUseCase)
 	assert.NoError(suite.T(), err)
+	// Patch the ExtractUser function
+	suite.patch = monkey.Patch(Infrastructure.CompareHashAndPasswordCustom, mockCompare)
+	suite.patch = monkey.Patch(Infrastructure.GenerateFromPasswordCustom, mockGenerate)
 }
 
 func (suite *AuthControllerTestSuite) TestLogin() {

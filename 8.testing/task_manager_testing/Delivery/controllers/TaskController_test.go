@@ -204,7 +204,7 @@ func (suite *TaskControllerTestSuite) TestUpdateTasksById() {
 	suite.controller.UpdateTasksById(ctx)
 
 	// Assert
-	suite.Equal(http.StatusOK, 200)
+	suite.Equal(http.StatusOK, rec.Code)
 	suite.mockTaskUseCase.AssertExpectations(suite.T())
 }
 
