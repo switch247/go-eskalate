@@ -12,11 +12,12 @@ import (
 	// "os"
 
 	"main/Domain"
+	mongo "main/mongo"
 	"main/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+	actualmongo "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/go-playground/validator"
@@ -24,12 +25,12 @@ import (
 
 type taskRepository struct {
 	validator  *validator.Validate
-	client     *mongo.Client
-	DataBase   *mongo.Database
-	collection *mongo.Collection
+	client     mongo.Client
+	DataBase   mongo.Database
+	collection mongo.Collection
 }
 
-func NewTaskRepository(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*taskRepository, error) {
+func NewTaskRepository(client mongo.Client, DataBase mongo.Database, _collection mongo.Collection) (*taskRepository, error) {
 
 	// collection.Drop(context.TODO()) //uncomment this tho drop collection
 	ts := &taskRepository{
@@ -53,14 +54,14 @@ func (ts *taskRepository) CreateTasks(ctx context.Context, task *Domain.Task) (D
 	defer session.EndSession(ctx)
 
 	resultTask := Domain.Task{}
-	err = mongo.WithSession(ctx, session, func(sc mongo.SessionContext) error {
+	err = mongo.WithSession(ctx, session, func(sc actualmongo.SessionContext) error {
 		err := session.StartTransaction()
 		if err != nil {
 			fmt.Println(err)
 			return err
 		}
 
-		insertResult, err := ts.collection.InsertOne(sc, task)
+		InsertedID, err := ts.collection.InsertOne(sc, task)
 		if err != nil {
 			fmt.Println(err)
 			session.AbortTransaction(sc)
@@ -68,7 +69,7 @@ func (ts *taskRepository) CreateTasks(ctx context.Context, task *Domain.Task) (D
 		}
 		// Fetch the inserted task
 		var fetched Domain.Task
-		err = ts.collection.FindOne(sc, bson.D{{"_id", insertResult.InsertedID.(primitive.ObjectID)}}).Decode(&fetched)
+		err = ts.collection.FindOne(sc, bson.D{{"_id", InsertedID.(primitive.ObjectID)}}).Decode(&fetched)
 
 		// fetched, err, _ := ts.GetTasksById(insertResult.InsertedID.(primitive.ObjectID))
 		if err != nil {
@@ -107,12 +108,12 @@ func (ts *taskRepository) GetTasks(ctx context.Context, user Domain.OmitedUser) 
 	// ts.mu.RLock()
 	// defer ts.mu.RUnlock()
 	// Create an index on the "_id" field
-	_, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
-		Keys: bson.D{{"_id", 1}},
-	})
-	if err1 != nil {
-		return nil, err1, 500
-	}
+	// _, err1 := ts.collection.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+	// 	Keys: bson.D{{"_id", 1}},
+	// })
+	// if err1 != nil {
+	// 	return nil, err1, 500
+	// }
 
 	// Pass these options to the Find method
 	findOptions := options.Find()
@@ -168,12 +169,12 @@ func (ts *taskRepository) GetTasks(ctx context.Context, user Domain.OmitedUser) 
 // get task by id
 func (ts *taskRepository) GetTasksById(ctx context.Context, id primitive.ObjectID, user Domain.OmitedUser) (Domain.Task, error, int) {
 	// Create an index on the "_id" field
-	_, err1 := ts.collection.Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys: bson.D{{"_id", 1}},
-	})
-	if err1 != nil {
-		return Domain.Task{}, err1, 500
-	}
+	// _, err1 := ts.collection.Indexes().CreateOne(ctx, mongo.IndexModel{
+	// 	Keys: bson.D{{"_id", 1}},
+	// })
+	// if err1 != nil {
+	// 	return Domain.Task{}, err1, 500
+	// }
 
 	filter := bson.D{{"_id", id}}
 	var result Domain.Task
@@ -208,7 +209,7 @@ func (ts *taskRepository) UpdateTasksById(ctx context.Context, id primitive.Obje
 	statusCode := 200
 
 	// Execute the transaction
-	err = mongo.WithSession(context.Background(), session, func(sc mongo.SessionContext) error {
+	err = mongo.WithSession(context.Background(), session, func(sc actualmongo.SessionContext) error {
 		// Start transaction
 		err = session.StartTransaction()
 		if err != nil {
@@ -297,15 +298,15 @@ func (ts *taskRepository) DeleteTasksById(ctx context.Context, id primitive.Obje
 		return errors.New("user does not have permission to update this task"), 403
 	}
 
-	deleteResult, err := ts.collection.DeleteOne(ctx, filter)
+	DeletedCount, err := ts.collection.DeleteOne(ctx, filter)
 	if err != nil {
 		fmt.Println(err)
 		return err, 500
 	}
-	if deleteResult.DeletedCount == 0 {
+	if DeletedCount == 0 {
 		return errors.New("Task does not exist"), http.StatusNotFound
 	}
-	fmt.Printf("Deleted %v documents in the trainers collection\n", deleteResult.DeletedCount)
+	fmt.Printf("Deleted %v documents in the trainers collection\n", DeletedCount)
 	return nil, 200
 
 }

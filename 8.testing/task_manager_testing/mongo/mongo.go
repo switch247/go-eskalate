@@ -39,6 +39,7 @@ type Cursor interface {
 	Close(context.Context) error
 	Next(context.Context) bool
 	Decode(interface{}) error
+	Err() error
 	All(context.Context, interface{}) error
 }
 
@@ -196,7 +197,41 @@ func (mr *mongoCursor) Next(ctx context.Context) bool {
 func (mr *mongoCursor) Decode(v interface{}) error {
 	return mr.mc.Decode(v)
 }
+func (mr *mongoCursor) Err() error {
+	return mr.mc.Err()
+}
 
 func (mr *mongoCursor) All(ctx context.Context, result interface{}) error {
 	return mr.mc.All(ctx, result)
+}
+
+type SessionContext interface {
+	mongo.SessionContext
+	// Add the methods of the SessionContext interface here
+	AbortTransaction(context.Context) error
+	Client() *mongo.Client
+	EndSession(context.Context)
+	StartTransaction(...*options.TransactionOptions) error
+	CommitTransaction(context.Context) error
+}
+type sessionContext struct {
+	session SessionContext
+}
+
+func (ms *sessionContext) AbortTransaction(ctx context.Context) error {
+	return ms.AbortTransaction(ctx)
+}
+func (ms *sessionContext) CommitTransaction(ctx context.Context) error {
+	return ms.CommitTransaction(ctx)
+}
+
+func (ms *sessionContext) EndSession(ctx context.Context) {
+	ms.EndSession(ctx)
+}
+func (ms *sessionContext) StartTransaction(opts ...*options.TransactionOptions) error {
+	return ms.StartTransaction(opts...)
+}
+
+func WithSession(ctx context.Context, session mongo.Session, fn func(mongo.SessionContext) error) error {
+	return mongo.WithSession(ctx, session, fn)
 }

@@ -8,26 +8,27 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+
+	// "go.mongodb.org/mongo-driver/mongo"
 
 	"main/Domain"
 	repo "main/Repositories"
+	"main/mongo"
 )
 
 type UserRepositoryTestSuite struct {
 	suite.Suite
-	client     *mongo.Client
-	database   *mongo.Database
-	collection *mongo.Collection
+	client     mongo.Client
+	database   mongo.Database
+	collection mongo.Collection
 	repo       Domain.UserRepository
 }
 
 func (suite *UserRepositoryTestSuite) SetupTest() {
 	// Initialize the Mongo client and database
 	url := "mongodb://localhost:27017"
-	clientOptions := options.Client().ApplyURI(url)
-	client, err := mongo.Connect(context.TODO(), clientOptions)
+	// clientOptions := options.Client().ApplyURI(url)
+	client, err := mongo.NewClient(url)
 	if err != nil {
 		suite.T().Errorf("failed to create Mongo client: %v", err)
 		return
@@ -36,7 +37,7 @@ func (suite *UserRepositoryTestSuite) SetupTest() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err = client.Ping(ctx, nil)
+	err = client.Ping(ctx)
 	if err != nil {
 		suite.T().Errorf("Failed to connect to MongoDB: %v", err)
 
@@ -60,9 +61,9 @@ func (suite *UserRepositoryTestSuite) SetupTest() {
 
 func (suite *UserRepositoryTestSuite) TearDownTest() {
 	// Clean up the database after the tests
-	if err := suite.database.Drop(context.Background()); err != nil {
-		suite.T().Errorf("failed to drop database: %v", err)
-	}
+	// if err := suite.database.Drop(context.Background()); err != nil {
+	// 	suite.T().Errorf("failed to drop database: %v", err)
+	// }
 }
 
 func (suite *UserRepositoryTestSuite) TestCreateUser() {

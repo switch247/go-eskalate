@@ -13,11 +13,13 @@ import (
 
 	"main/Domain"
 	"main/Infrastructure"
+	"main/mongo"
 	"main/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+
+	actualmongo "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/go-playground/validator"
@@ -25,12 +27,12 @@ import (
 
 type userRepository struct {
 	validator  *validator.Validate
-	client     *mongo.Client
-	DataBase   *mongo.Database
-	collection *mongo.Collection
+	client     mongo.Client
+	DataBase   mongo.Database
+	collection mongo.Collection
 }
 
-func NewUserRepository(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*userRepository, error) {
+func NewUserRepository(client mongo.Client, DataBase mongo.Database, _collection mongo.Collection) (*userRepository, error) {
 
 	return &userRepository{
 		validator:  validator.New(),
@@ -59,13 +61,13 @@ func (as *userRepository) CreateUsers(ctx context.Context, user *Domain.User) (D
 		return Domain.OmitedUser{}, err, 500
 	}
 	user.Password = string(hashedPassword)
-	insertResult, err := as.collection.InsertOne(ctx, user)
+	InsertedID, err := as.collection.InsertOne(ctx, user)
 	if err != nil {
 		return Domain.OmitedUser{}, err, 500
 	}
 	// Fetch the inserted task
 	var fetched Domain.OmitedUser
-	err = as.collection.FindOne(context.TODO(), bson.D{{"_id", insertResult.InsertedID.(primitive.ObjectID)}}).Decode(&fetched)
+	err = as.collection.FindOne(context.TODO(), bson.D{{"_id", InsertedID.(primitive.ObjectID)}}).Decode(&fetched)
 	if err != nil {
 		fmt.Println(err)
 		return Domain.OmitedUser{}, errors.New("User Not Created"), 500
@@ -82,12 +84,12 @@ func (ts *userRepository) GetUsers(ctx context.Context) ([]*Domain.OmitedUser, e
 	// ts.mu.RLock()
 	// defer ts.mu.RUnlock()
 	// Create an index on the "_id" field
-	_, err1 := ts.collection.Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys: bson.D{{"_id", 1}},
-	})
-	if err1 != nil {
-		return nil, err1, 500
-	}
+	// _, err1 := ts.collection.Indexes().CreateOne(ctx, mongo.IndexModel{
+	// 	Keys: bson.D{{"_id", 1}},
+	// })
+	// if err1 != nil {
+	// 	return nil, err1, 500
+	// }
 
 	// Pass these options to the Find method
 	findOptions := options.Find()
@@ -136,12 +138,12 @@ func (ts *userRepository) GetUsers(ctx context.Context) ([]*Domain.OmitedUser, e
 // get user by id
 func (ts *userRepository) GetUsersById(ctx context.Context, id primitive.ObjectID, user Domain.OmitedUser) (Domain.OmitedUser, error, int) {
 	// Create an index on the "_id" field
-	_, err1 := ts.collection.Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys: bson.D{{"_id", 1}},
-	})
-	if err1 != nil {
-		return Domain.OmitedUser{}, err1, 500
-	}
+	// _, err1 := ts.collection.Indexes().CreateOne(ctx, mongo.IndexModel{
+	// 	Keys: bson.D{{"_id", 1}},
+	// })
+	// if err1 != nil {
+	// 	return Domain.OmitedUser{}, err1, 500
+	// }
 	var filter bson.D
 	if user.Is_Admin == false {
 		fmt.Println("user is not admin")
@@ -180,7 +182,7 @@ func (ts *userRepository) UpdateUsersById(ctx context.Context, id primitive.Obje
 	statusCode := 200
 
 	// Execute the transaction
-	err = mongo.WithSession(ctx, session, func(sc mongo.SessionContext) error {
+	err = mongo.WithSession(ctx, session, func(sc actualmongo.SessionContext) error {
 		// Start transaction
 		err = session.StartTransaction()
 		if err != nil {
@@ -247,15 +249,15 @@ func (ts *userRepository) DeleteUsersById(ctx context.Context, id primitive.Obje
 		return errors.New("permision denied"), http.StatusForbidden
 	}
 
-	deleteResult, err := ts.collection.DeleteOne(ctx, filter)
+	DeletedCount, err := ts.collection.DeleteOne(ctx, filter)
 	if err != nil {
 		fmt.Println(err)
 		return err, 500
 	}
-	if deleteResult.DeletedCount == 0 {
+	if DeletedCount == 0 {
 		return errors.New("User does not exist"), http.StatusNotFound
 	}
-	fmt.Printf("Deleted %v documents in the trainers collection\n", deleteResult.DeletedCount)
+	fmt.Printf("Deleted %v documents in the trainers collection\n", DeletedCount)
 	return nil, 200
 
 }

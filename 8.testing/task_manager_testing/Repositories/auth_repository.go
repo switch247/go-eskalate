@@ -9,22 +9,26 @@ import (
 
 	"main/Domain"
 	"main/Infrastructure"
+	mongo "main/mongo"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
+
+	// "go.mongodb.org/mongo-driver/bson/primitive"
+
+	// "go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/go-playground/validator"
 )
 
 type authRepository struct {
 	validator  *validator.Validate
-	client     *mongo.Client
-	DataBase   *mongo.Database
-	collection *mongo.Collection
+	client     mongo.Client
+	DataBase   mongo.Database
+	collection mongo.Collection
 }
 
-func NewAuthRepository(client *mongo.Client, DataBase *mongo.Database, _collection *mongo.Collection) (*authRepository, error) {
+func NewAuthRepository(client mongo.Client, DataBase mongo.Database, _collection mongo.Collection) (*authRepository, error) {
 	// _collection.Drop(context.TODO()) //un comment this tho drop collection
 	return &authRepository{
 		validator:  validator.New(),
@@ -76,13 +80,13 @@ func (au *authRepository) Register(ctx context.Context, user *Domain.User) (Doma
 		return Domain.OmitedUser{}, err, 500
 	}
 	user.Password = string(hashedPassword)
-	insertResult, err := au.collection.InsertOne(ctx, user)
+	InsertedID, err := au.collection.InsertOne(ctx, user)
 	if err != nil {
 		return Domain.OmitedUser{}, err, 500
 	}
 	// Fetch the inserted task
 	var fetched Domain.OmitedUser
-	err = au.collection.FindOne(context.TODO(), bson.D{{"_id", insertResult.InsertedID.(primitive.ObjectID)}}).Decode(&fetched)
+	err = au.collection.FindOne(context.TODO(), bson.D{{"_id", InsertedID.(primitive.ObjectID)}}).Decode(&fetched)
 	if err != nil {
 		fmt.Println(err)
 		return Domain.OmitedUser{}, errors.New("User Not Created"), 500
